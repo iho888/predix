@@ -44,6 +44,17 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold">Welcome back, {session.name.split(" ")[0]}</h1>
         <p className="text-muted-foreground mt-1">Here&apos;s an overview of your trading simulations</p>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <Link href="/dashboard/live-apply">
+            <Button variant="secondary" size="sm">Live apply</Button>
+          </Link>
+          <Link href="/dashboard/strategies">
+            <Button variant="outline" size="sm">Strategies</Button>
+          </Link>
+          <Link href="/dashboard/simulations">
+            <Button variant="outline" size="sm">Simulations</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}

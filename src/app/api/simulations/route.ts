@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSessionFromRequest, canAccessPlatform } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { runSimulation } from "@/lib/simulation/engine"
-import { StrategyConfig, Platform } from "@/types"
+import { parseStoredStrategyConfig, storedConfigToStrategyConfig } from "@/lib/strategy-templates"
+import { Platform } from "@/types"
 import { z } from "zod"
 
 const createSchema = z.object({
@@ -47,7 +48,11 @@ export async function POST(req: NextRequest) {
     })
     if (!strategy) return NextResponse.json({ error: "Strategy not found" }, { status: 404 })
 
-    const config = JSON.parse(strategy.config) as StrategyConfig
+    const parsed = parseStoredStrategyConfig(JSON.parse(strategy.config) as unknown)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: "Invalid strategy configuration" }, { status: 400 })
+    }
+    const runConfig = storedConfigToStrategyConfig(parsed.data)
     const startDate = new Date(data.startDate)
     const endDate = new Date(data.endDate)
 
@@ -72,7 +77,7 @@ export async function POST(req: NextRequest) {
     // Run simulation synchronously (fine for mock data)
     try {
       const { metrics, trades } = runSimulation(
-        config,
+        runConfig,
         strategy.platform as Platform,
         startDate,
         endDate,

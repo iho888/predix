@@ -1,13 +1,13 @@
 import { MarketTick, Trade, SimulationMetrics, StrategyConfig, Platform } from "@/types"
 import { generatePolymarketTicks } from "./markets/polymarket"
 import { generateKaishiTicks } from "./markets/kaishi"
-import { differenceInDays, format, startOfMonth } from "date-fns"
+import { addDays, differenceInDays, format, startOfMonth } from "date-fns"
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11)
 }
 
-function conditionMet(tick: MarketTick, config: StrategyConfig): boolean {
+function conditionMet(tick: MarketTick, config: StrategyConfig, currentTime: Date): boolean {
   const c = config.entryConditions
   const price = c.outcome === "YES" || c.outcome === "LONG" ? tick.yesPrice : tick.noPrice
 
@@ -16,6 +16,13 @@ function conditionMet(tick: MarketTick, config: StrategyConfig): boolean {
   if (c.minVolume !== undefined && tick.volume24h < c.minVolume) return false
   if (c.minLiquidity !== undefined && tick.liquidity < c.minLiquidity) return false
   if (c.trend && c.trend !== "any" && tick.trend !== c.trend) return false
+
+  const d = config.endWithinDays
+  if (d != null && d > 0) {
+    const res = tick.resolveDate
+    if (res < currentTime) return false
+    if (res > addDays(currentTime, d)) return false
+  }
 
   return true
 }
@@ -117,7 +124,7 @@ export function runSimulation(
         )
         if (alreadyOpen) continue
 
-        if (conditionMet(tick, config)) {
+        if (conditionMet(tick, config, currentTime)) {
           const positionSize = capital * (config.positionSizePct / 100)
           if (positionSize < 5) continue // minimum $5
 

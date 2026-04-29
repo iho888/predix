@@ -2,31 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSessionFromRequest, canAccessPlatform } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
+import { normalizeIncomingStrategyConfigBody, parseStoredStrategyConfig, storedStrategyConfigZ } from "@/lib/strategy-templates"
+import type { StoredStrategyConfig } from "@/types"
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
   platform: z.enum(["polymarket", "kaishi", "generic"]),
-  config: z.object({
-    entryConditions: z.object({
-      outcome: z.enum(["YES", "NO", "LONG", "SHORT"]),
-      minProbability: z.number().min(0).max(1).optional(),
-      maxProbability: z.number().min(0).max(1).optional(),
-      minVolume: z.number().min(0).optional(),
-      trend: z.enum(["rising", "falling", "stable", "any"]).optional(),
-      minLiquidity: z.number().min(0).optional(),
-    }),
-    exitConditions: z.object({
-      takeProfitPct: z.number().min(0.01).max(10),
-      stopLossPct: z.number().min(0.01).max(1),
-      maxHoldingDays: z.number().int().min(1).optional(),
-    }),
-    positionSizePct: z.number().min(1).max(100),
-    maxOpenPositions: z.number().int().min(1).max(20),
-    minOdds: z.number().optional(),
-    maxOdds: z.number().optional(),
-  }),
+  config: storedStrategyConfigZ,
 })
+
+function normalizeForStorage(config: z.infer<typeof storedStrategyConfigZ>): StoredStrategyConfig {
+  return { ...config, version: 1 } as StoredStrategyConfig
+}
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
@@ -37,10 +25,16 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   })
 
-  return NextResponse.json(strategies.map((s) => ({
-    ...s,
-    config: JSON.parse(s.config),
-  })))
+  return NextResponse.json(
+    strategies.map((s) => {
+      const raw = JSON.parse(s.config) as unknown
+      const parsed = parseStoredStrategyConfig(raw)
+      if (parsed.ok) {
+        return { ...s, config: parsed.data }
+      }
+      return { ...s, config: raw }
+    })
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -52,7 +46,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
+    normalizeIncomingStrategyConfigBody(body)
     const data = createSchema.parse(body)
+    const stored = normalizeForStorage(data.config)
 
     const strategy = await prisma.strategy.create({
       data: {
@@ -60,11 +56,11 @@ export async function POST(req: NextRequest) {
         name: data.name,
         description: data.description,
         platform: data.platform,
-        config: JSON.stringify(data.config),
+        config: JSON.stringify(stored),
       },
     })
 
-    return NextResponse.json({ ...strategy, config: data.config }, { status: 201 })
+    return NextResponse.json({ ...strategy, config: stored }, { status: 201 })
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.errors[0].message }, { status: 400 })

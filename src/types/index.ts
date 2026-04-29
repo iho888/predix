@@ -24,7 +24,31 @@ export interface StrategyConfig {
   maxOpenPositions: number
   minOdds?: number
   maxOdds?: number
+  /** If set, market must resolve on/before this many days after the current tick. */
+  endWithinDays?: number | null
 }
+
+export type StrategyTemplateId = "high_probability_bond" | "classic_backtest"
+
+export interface HighProbabilityBondParams {
+  minPrice: number
+  maxPrice: number | null
+  minLiquidityNum: number
+  minVolumeNum: number
+  endWithinDays: number | null
+  takeProfitPct: number
+  stopLossPct: number
+  maxHoldingDays: number | null
+  positionSizePct: number
+  maxOpenPositions: number
+}
+
+/** @deprecated use HighProbabilityBondParams (legacy name) */
+export type PolyWatchBondParams = HighProbabilityBondParams
+
+export type StoredStrategyConfig =
+  | { templateId: "high_probability_bond"; version?: 1; params: HighProbabilityBondParams }
+  | { templateId: "classic_backtest"; version?: 1; params: StrategyConfig }
 
 export interface MarketTick {
   marketId: string
