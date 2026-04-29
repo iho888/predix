@@ -26,6 +26,7 @@ export default function StrategiesPage() {
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [toast, setToast] = useState("")
 
   const [templateId, setTemplateId] = useState<StrategyTemplateId>("high_probability_bond")
   const [stored, setStored] = useState<StoredStrategyConfig>(() => defaultStoredConfig("high_probability_bond"))
@@ -49,6 +50,11 @@ export default function StrategiesPage() {
   useEffect(() => {
     fetchStrategies()
   }, [])
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(""), 3000)
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
