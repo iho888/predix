@@ -40,6 +40,7 @@ export default function StrategiesPage() {
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [toast, setToast] = useState("")
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -69,6 +70,7 @@ export default function StrategiesPage() {
       setShowForm(false)
       setForm({ name: "", description: "", platform: "polymarket", config: defaultConfig })
       fetchStrategies()
+      showToast("Strategy created successfully")
     } catch {
       setError("Failed to create strategy")
     } finally {
@@ -80,6 +82,12 @@ export default function StrategiesPage() {
     if (!confirm("Delete this strategy?")) return
     await fetch(`/api/strategies/${id}`, { method: "DELETE" })
     fetchStrategies()
+    showToast("Strategy deleted")
+  }
+
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(""), 3000)
   }
 
   function updateEntry(key: string, value: unknown) {
@@ -98,6 +106,11 @@ export default function StrategiesPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">
+          {toast}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Strategies</h1>

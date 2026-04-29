@@ -176,7 +176,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/40 px-6 py-8 mt-16">
         <div className="max-w-6xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <span>© 2024 Predix. All rights reserved.</span>
+          <span>© 2026 Predix. All rights reserved.</span>
           <span>Built for prediction market traders</span>
         </div>
       </footer>

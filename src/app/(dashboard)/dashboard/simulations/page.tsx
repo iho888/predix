@@ -29,6 +29,7 @@ export default function SimulationsPage() {
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [toast, setToast] = useState("")
   const [form, setForm] = useState({
     strategyId: "",
     name: "",
@@ -62,6 +63,7 @@ export default function SimulationsPage() {
       if (!res.ok) { setError(data.error); return }
       setShowForm(false)
       fetchData()
+      showToast("Simulation completed successfully")
     } catch {
       setError("Failed to run simulation")
     } finally {
@@ -69,8 +71,18 @@ export default function SimulationsPage() {
     }
   }
 
+  function showToast(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(""), 3000)
+  }
+
   return (
     <div className="space-y-6 max-w-5xl">
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg text-sm font-medium">
+          {toast}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Simulations</h1>

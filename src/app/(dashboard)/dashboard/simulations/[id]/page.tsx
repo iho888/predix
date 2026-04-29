@@ -63,8 +63,56 @@ export default function SimulationDetailPage() {
     URL.revokeObjectURL(url)
   }
 
+  function handleExportCSV() {
+    if (!sim || sim.trades.length === 0) return
+    const headers = ["market", "platform", "outcome", "entryDate", "exitDate", "entryPrice", "exitPrice", "size", "pnl", "pnlPct", "exitReason"]
+    const rows = sim.trades.map((t) => [
+      `"${t.marketTitle.replace(/"/g, '""')}"`,
+      t.platform,
+      t.outcome,
+      t.entryDate,
+      t.exitDate ?? "",
+      t.entryPrice,
+      t.exitPrice ?? "",
+      t.size,
+      t.pnl ?? "",
+      t.pnlPct ?? "",
+      t.exitReason ?? "",
+    ])
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${sim.name.replace(/\s+/g, "_")}_trades.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-muted-foreground">Loading simulation...</div></div>
+    return (
+      <div className="space-y-6 max-w-6xl">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-secondary animate-pulse" />
+          <div className="space-y-1">
+            <div className="h-6 w-48 rounded bg-secondary animate-pulse" />
+            <div className="h-4 w-64 rounded bg-secondary animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-lg border bg-card p-5">
+              <div className="h-3 w-20 rounded bg-secondary animate-pulse mb-2" />
+              <div className="h-6 w-28 rounded bg-secondary animate-pulse" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg border bg-card p-6">
+          <div className="h-4 w-32 rounded bg-secondary animate-pulse mb-4" />
+          <div className="h-64 rounded bg-secondary animate-pulse" />
+        </div>
+      </div>
+    )
   }
   if (!sim) return <div>Simulation not found</div>
 
@@ -89,9 +137,14 @@ export default function SimulationDetailPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleExport}>
-          <Download className="w-4 h-4 mr-2" /> Export JSON
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV} disabled={!sim.trades.length}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Export JSON
+          </Button>
+        </div>
       </div>
 
       {!m ? (
