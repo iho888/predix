@@ -1,6 +1,7 @@
 import { MarketTick, Trade, SimulationMetrics, StrategyConfig, Platform } from "@/types"
 import { generatePolymarketTicks } from "./markets/polymarket"
 import { generateKaishiTicks } from "./markets/kaishi"
+import { fetchRealPolymarketTicks } from "./markets/polymarket-real"
 import { addDays, differenceInDays, format, startOfMonth } from "date-fns"
 
 function generateId(): string {
@@ -27,17 +28,22 @@ function conditionMet(tick: MarketTick, config: StrategyConfig, currentTime: Dat
   return true
 }
 
-export function runSimulation(
+export async function runSimulation(
   config: StrategyConfig,
   platform: Platform,
   startDate: Date,
   endDate: Date,
   initialCapital: number
-): { metrics: SimulationMetrics; trades: Trade[] } {
-  // Generate market data
+): Promise<{ metrics: SimulationMetrics; trades: Trade[] }> {
+  // Generate market data — real Polymarket data with synthetic fallback
   let ticks: MarketTick[] = []
   if (platform === "polymarket" || platform === "generic") {
-    ticks = ticks.concat(generatePolymarketTicks(startDate, endDate))
+    try {
+      const realTicks = await fetchRealPolymarketTicks(startDate, endDate)
+      ticks = ticks.concat(realTicks.length > 0 ? realTicks : generatePolymarketTicks(startDate, endDate))
+    } catch {
+      ticks = ticks.concat(generatePolymarketTicks(startDate, endDate))
+    }
   }
   if (platform === "kaishi" || platform === "generic") {
     ticks = ticks.concat(generateKaishiTicks(startDate, endDate))

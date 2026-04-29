@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+
+export const maxDuration = 60
 import { getSessionFromRequest, canAccessPlatform } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { runSimulation } from "@/lib/simulation/engine"
@@ -74,9 +76,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Run simulation synchronously (fine for mock data)
     try {
-      const { metrics, trades } = runSimulation(
+      const { metrics, trades } = await runSimulation(
         runConfig,
         strategy.platform as Platform,
         startDate,
