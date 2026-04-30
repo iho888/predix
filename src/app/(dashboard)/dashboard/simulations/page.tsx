@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, PlayCircle, ChevronUp, Eye } from "lucide-react"
 import type { SimulationMetrics } from "@/types"
 import { formatCurrency, formatPct } from "@/lib/utils"
+import { DataStatusBar } from "@/components/simulations/DataStatusBar"
 
 interface Strategy {
   id: string
@@ -46,7 +47,7 @@ export default function SimulationsPage() {
   const [simulations, setSimulations] = useState<Simulation[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [runTab, setRunTab] = useState<"batch" | "historical">("batch")
+  const [runTab, setRunTab] = useState<"batch" | "historical" | "db">("db")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [toast, setToast] = useState("")
@@ -146,6 +147,40 @@ export default function SimulationsPage() {
     }
   }
 
+  async function handleRunDbReplay(e: React.FormEvent) {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      const startDate = new Date(form.histStart)
+      const endDate = new Date(form.histEnd)
+      const res = await fetch("/api/simulations/db-replay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          strategyId: form.strategyId,
+          name: form.name,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          initialCapital: form.initialCapital,
+          maxMarkets: form.maxMarketsHistorical,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Request failed")
+        return
+      }
+      setShowForm(false)
+      fetchData()
+      showToast("DB replay simulation completed successfully")
+    } catch {
+      setError("Failed to run DB replay simulation")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(""), 3000)
@@ -172,6 +207,8 @@ export default function SimulationsPage() {
         </Button>
       </div>
 
+      <DataStatusBar onSynced={() => fetchData()} />
+
       {eligibleStrategies.length === 0 && (
         <div className="p-4 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
           You need a saved <strong className="font-medium">Polymarket</strong> strategy using the{" "}
@@ -187,7 +224,9 @@ export default function SimulationsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Run simulation</CardTitle>
-            <CardDescription>Choose closed batch (snapshot) or historical time-walk (CLOB replay in a date window).</CardDescription>
+            <CardDescription>
+              DB replay runs entirely against stored data. Legacy modes still work (live API).
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
@@ -195,10 +234,11 @@ export default function SimulationsPage() {
                 {error}
               </div>
             )}
-            <Tabs value={runTab} onValueChange={(v) => setRunTab(v as "batch" | "historical")}>
-              <TabsList className="grid w-full max-w-lg grid-cols-2">
+            <Tabs value={runTab} onValueChange={(v) => setRunTab(v as "batch" | "historical" | "db")}>
+              <TabsList className="grid w-full max-w-lg grid-cols-3">
                 <TabsTrigger value="batch">Closed batch</TabsTrigger>
                 <TabsTrigger value="historical">Historical dry-run</TabsTrigger>
+                <TabsTrigger value="db">DB replay</TabsTrigger>
               </TabsList>
 
               <TabsContent value="batch" className="mt-4 space-y-4">
@@ -361,6 +401,88 @@ export default function SimulationsPage() {
                   </Button>
                 </form>
               </TabsContent>
+
+              <TabsContent value="db" className="mt-4 space-y-4">
+                <div className="rounded-md border border-sky-500/30 bg-sky-500/5 p-3 text-sm text-sky-200/90 space-y-2">
+                  <p>
+                    Runs against your <strong className="font-medium">stored Polymarket database</strong> (no API calls during the run).
+                    Large date ranges may take ~10–30s.
+                  </p>
+                </div>
+                <form onSubmit={handleRunDbReplay} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Simulation name</Label>
+                      <Input
+                        placeholder="e.g. DB replay: last 90d"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Strategy</Label>
+                      <Select value={form.strategyId} onValueChange={(v) => setForm({ ...form, strategyId: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select strategy…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {strategies.filter((s) => s.platform === "polymarket").map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Simulation start (local)</Label>
+                      <Input type="datetime-local" value={form.histStart} onChange={(e) => setForm({ ...form, histStart: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Simulation end (local, must be past)</Label>
+                      <Input type="datetime-local" value={form.histEnd} onChange={(e) => setForm({ ...form, histEnd: e.target.value })} required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Max markets (1–200)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={200}
+                        value={form.maxMarketsHistorical}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            maxMarketsHistorical: Math.min(200, Math.max(1, parseInt(e.target.value, 10) || 1)),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Initial capital ($)</Label>
+                      <Input
+                        type="number"
+                        min={100}
+                        value={form.initialCapital}
+                        onChange={(e) => setForm({ ...form, initialCapital: parseFloat(e.target.value) })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={loading || !form.strategyId}>
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    {loading ? "Running…" : "Run DB replay"}
+                  </Button>
+                </form>
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
@@ -400,6 +522,11 @@ export default function SimulationsPage() {
                       {sim.metrics?.runKind === "historical" && (
                         <Badge variant="secondary" className="text-xs">
                           Historical
+                        </Badge>
+                      )}
+                      {(sim.metrics as any)?.polymarketMeta?.gammaWinnerField?.toString?.().startsWith("db_") && (
+                        <Badge variant="secondary" className="text-xs">
+                          DB Replay
                         </Badge>
                       )}
                       {sim.metrics?.runKind === "closed_batch" && (

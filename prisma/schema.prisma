@@ -57,3 +57,60 @@ model Simulation {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
 }
+
+model PolymarketMarket {
+  slug                String   @id
+  question            String
+  conditionId         String
+
+  outcomesJson        Json
+  clobTokenIdsJson    Json
+
+  closed              Boolean  @default(false)
+  active              Boolean  @default(false)
+  negRisk             Boolean  @default(false)
+
+  startDate           DateTime?
+  endDate             DateTime?
+
+  liquidityNum        Float?
+  volumeNum           Float?
+
+  winningOutcomeIndex Int?
+
+  lastSyncedAt        DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  candles             PolymarketPriceCandle[]
+
+  @@index([closed])
+  @@index([endDate])
+  @@index([active])
+}
+
+model PolymarketPriceCandle {
+  id         String   @id @default(cuid())
+  marketSlug String
+  timestamp  DateTime
+  yesPrice   Float
+
+  market     PolymarketMarket @relation(fields: [marketSlug], references: [slug], onDelete: Cascade)
+
+  @@unique([marketSlug, timestamp])
+  @@index([marketSlug, timestamp])
+}
+
+model DataSyncLog {
+  id            String   @id @default(cuid())
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime?
+
+  marketsAdded  Int      @default(0)
+  marketsUpdated Int     @default(0)
+  candlesAdded  Int      @default(0)
+
+  status        String
+  errorMessage  String?
+  syncType      String
+}

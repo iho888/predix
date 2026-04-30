@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-polymarket",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
+

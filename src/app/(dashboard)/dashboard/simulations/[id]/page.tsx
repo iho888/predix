@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Download } from "lucide-react"
 import type { PolymarketSimulationBatchCounters, SimulationMetrics, SimulatedTradeRow, Trade } from "@/types"
 import { formatCurrency, formatPct, cn } from "@/lib/utils"
+import { ViewToggle } from "@/components/simulations/detail/ViewToggle"
+import { MarketCardsView } from "@/components/simulations/detail/MarketCardsView"
 
 type MetricsView = SimulationMetrics & {
   batch?: PolymarketSimulationBatchCounters
@@ -73,6 +75,7 @@ export default function SimulationDetailPage() {
   const router = useRouter()
   const [sim, setSim] = useState<SimDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState<"dashboard" | "markets">("dashboard")
 
   useEffect(() => {
     fetch(`/api/simulations/${params.id}`)
@@ -215,7 +218,8 @@ export default function SimulationDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <ViewToggle value={view} onChange={setView} />
           <Button variant="outline" onClick={handleExportCSV} disabled={!sim.trades.length}>
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
@@ -229,6 +233,10 @@ export default function SimulationDetailPage() {
         <Card><CardContent className="py-12 text-center text-muted-foreground">No metrics available</CardContent></Card>
       ) : (
         <>
+          {view === "markets" ? (
+            <MarketCardsView trades={sim.trades} />
+          ) : (
+            <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total ROI" value={formatPct(m.roi)} positive={m.roi >= 0} sub={formatCurrency(m.totalPnL)} />
             <StatCard label="Final Capital" value={formatCurrency(m.finalCapital)} sub={`started at ${formatCurrency(m.initialCapital)}`} />
@@ -411,6 +419,8 @@ export default function SimulationDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+            </>
           )}
         </>
       )}
