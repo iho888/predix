@@ -1,7 +1,7 @@
 "use client"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { TrendingUp, LayoutDashboard, Zap, PlayCircle, CreditCard, LogOut, Clock, ListFilter } from "lucide-react"
+import { TrendingUp, LayoutDashboard, Zap, PlayCircle, CreditCard, LogOut, Clock, ListFilter, LineChart } from "lucide-react"
 import { UserSession } from "@/types"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/strategies", label: "Strategies", icon: Zap },
   { href: "/dashboard/live-apply", label: "Live apply", icon: ListFilter },
+  { href: "/dashboard/simulate", label: "Simulate", icon: LineChart },
   { href: "/dashboard/simulations", label: "Simulations", icon: PlayCircle },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
 ]
