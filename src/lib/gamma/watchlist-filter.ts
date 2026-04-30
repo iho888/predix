@@ -55,7 +55,8 @@ function parseResolutionEndUtc(raw: string | null | undefined): Date | null {
   }
 }
 
-function endsWithinDays(params: { endDate: string | null }, days: number, now: Date): boolean {
+/** Resolution must fall in `(now, now + days]` (see live bond scan). */
+export function endsWithinDays(params: { endDate: string | null }, days: number, now: Date): boolean {
   const end = params.endDate ? parseResolutionEndUtc(params.endDate) : null
   if (!end) return false
   const windowEnd = addDays(now, days)

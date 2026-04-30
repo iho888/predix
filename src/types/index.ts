@@ -113,8 +113,11 @@ export type SimulatedTradeRow =
       positionSizeUsd: number
       pnl: number
       won: boolean
-      entryRule: "clob_first_candle"
+      entryRule: "clob_first_candle" | "clob_first_candle_after_start"
       historyFirstT?: number
+      historyExitT?: number
+      exitReason?: "take_profit" | "stop_loss" | "max_holding" | "resolution"
+      polymarketRun?: "closed_batch" | "historical"
     }
 
 export interface SimulationMetrics {
@@ -151,17 +154,24 @@ export interface PolymarketSimulationBatchCounters {
   totalTrades: number
   winningTrades: number
   matchRate: number
+  /** Historical dry-run only */
+  skippedEndWithinDays?: number
+  skippedMaxPositions?: number
+  skippedLiqVolGamma?: number
 }
 
 export interface PolymarketSimulationBatchMeta {
-  entryRule: "clob_first_candle"
-  endWithinDaysApplied: false
+  entryRule: "clob_first_candle" | "clob_first_candle_after_start"
+  endWithinDaysApplied: boolean
   gammaWinnerField: string
+  /** Liquidity/volume use current Gamma row, not point-in-time at sim start. */
+  gammaLiquidityVolumePointInTime?: boolean
 }
 
-/** `metricsJson` for Polymarket closed batch runs: core metrics + batch diagnostics. */
+/** `metricsJson` for Polymarket batch / historical runs: core metrics + batch diagnostics. */
 export type PolymarketBatchSimulationMetrics = SimulationMetrics & {
   batch: PolymarketSimulationBatchCounters
+  runKind?: "closed_batch" | "historical"
   polymarketMeta: PolymarketSimulationBatchMeta
 }
 

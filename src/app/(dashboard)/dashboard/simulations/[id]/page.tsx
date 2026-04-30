@@ -14,7 +14,13 @@ import { formatCurrency, formatPct, cn } from "@/lib/utils"
 
 type MetricsView = SimulationMetrics & {
   batch?: PolymarketSimulationBatchCounters
-  polymarketMeta?: { entryRule: string; endWithinDaysApplied: boolean; gammaWinnerField: string }
+  runKind?: "closed_batch" | "historical"
+  polymarketMeta?: {
+    entryRule: string
+    endWithinDaysApplied: boolean
+    gammaWinnerField: string
+    gammaLiquidityVolumePointInTime?: boolean
+  }
 }
 
 interface SimDetail {
@@ -93,7 +99,20 @@ export default function SimulationDetailPage() {
     const lines: string[][] = []
     const first = sim.trades[0]
     if (isPolymarketStoredTrade(first)) {
-      lines.push(["slug", "question", "side", "entryPrice", "exitPrice", "positionUsd", "pnl", "won", "entryRule"])
+      lines.push([
+        "slug",
+        "question",
+        "side",
+        "entryPrice",
+        "exitPrice",
+        "positionUsd",
+        "pnl",
+        "won",
+        "entryRule",
+        "exitReason",
+        "entryTs",
+        "exitTs",
+      ])
       for (const raw of sim.trades) {
         if (!isPolymarketStoredTrade(raw)) continue
         lines.push([
@@ -106,6 +125,9 @@ export default function SimulationDetailPage() {
           String(raw.pnl),
           raw.won ? "true" : "false",
           raw.entryRule,
+          raw.exitReason ?? "",
+          raw.historyFirstT != null ? String(raw.historyFirstT) : "",
+          raw.historyExitT != null ? String(raw.historyExitT) : "",
         ])
       }
     } else {
@@ -176,11 +198,17 @@ export default function SimulationDetailPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold">{sim.name}</h1>
               <Badge variant={sim.status === "COMPLETED" ? "success" : "secondary"} className="text-xs capitalize">
                 {sim.status.toLowerCase()}
               </Badge>
+              {m?.runKind === "historical" && (
+                <Badge variant="outline" className="text-xs">Historical</Badge>
+              )}
+              {m?.runKind === "closed_batch" && (
+                <Badge variant="outline" className="text-xs">Closed batch</Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {sim.strategy.name} · {sim.platform} · {formatCurrency(sim.initialCapital)} capital
@@ -223,10 +251,22 @@ export default function SimulationDetailPage() {
                 <div>Skipped (non-binary / neg_risk): <span className="text-foreground font-medium">{batch.skippedNonBinary}</span></div>
                 <div>Skipped (filter): <span className="text-foreground font-medium">{batch.skippedNoMatch}</span></div>
                 <div>Skipped (entry band @ first candle): <span className="text-foreground font-medium">{batch.skippedEntryBand}</span></div>
+                {batch.skippedEndWithinDays != null && (
+                  <div>Skipped (endWithinDays): <span className="text-foreground font-medium">{batch.skippedEndWithinDays}</span></div>
+                )}
+                {batch.skippedMaxPositions != null && (
+                  <div>Skipped (max open positions): <span className="text-foreground font-medium">{batch.skippedMaxPositions}</span></div>
+                )}
+                {batch.skippedLiqVolGamma != null && batch.skippedLiqVolGamma > 0 && (
+                  <div>Skipped (Gamma liq/vol): <span className="text-foreground font-medium">{batch.skippedLiqVolGamma}</span></div>
+                )}
                 {m.polymarketMeta && (
                   <div className="col-span-2 md:col-span-4 text-xs pt-2 border-t border-border/40">
                     Entry rule: {m.polymarketMeta.entryRule} · <code>endWithinDays</code> applied:{" "}
                     {String(m.polymarketMeta.endWithinDaysApplied)} · Winner field: {m.polymarketMeta.gammaWinnerField}
+                    {m.polymarketMeta.gammaLiquidityVolumePointInTime && (
+                      <> · Gamma liq/vol: current snapshot (not historical point-in-time)</>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -311,7 +351,8 @@ export default function SimulationDetailPage() {
                         <th className="text-right py-2 pr-4 text-muted-foreground font-medium">Entry</th>
                         <th className="text-right py-2 pr-4 text-muted-foreground font-medium">Exit</th>
                         <th className="text-right py-2 pr-4 text-muted-foreground font-medium">Size</th>
-                        <th className="text-right py-2 text-muted-foreground font-medium">P&L</th>
+                        <th className="text-right py-2 pr-4 text-muted-foreground font-medium">P&L</th>
+                        <th className="text-left py-2 text-muted-foreground font-medium">Exit</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -330,8 +371,11 @@ export default function SimulationDetailPage() {
                               <td className="py-2 pr-4 text-right text-xs">{(raw.entryPrice * 100).toFixed(1)}¢</td>
                               <td className="py-2 pr-4 text-right text-xs">{(raw.exitPrice * 100).toFixed(1)}¢</td>
                               <td className="py-2 pr-4 text-right text-xs">{formatCurrency(raw.positionSizeUsd)}</td>
-                              <td className={cn("py-2 text-right text-xs font-medium", raw.pnl >= 0 ? "text-green-400" : "text-red-400")}>
+                              <td className={cn("py-2 pr-4 text-right text-xs font-medium", raw.pnl >= 0 ? "text-green-400" : "text-red-400")}>
                                 {formatCurrency(raw.pnl)}
+                              </td>
+                              <td className="py-2 text-xs text-muted-foreground capitalize">
+                                {raw.exitReason ?? "—"}
                               </td>
                             </tr>,
                           ]
@@ -350,9 +394,10 @@ export default function SimulationDetailPage() {
                               {trade.exitPrice != null ? `${(trade.exitPrice * 100).toFixed(1)}¢` : "—"}
                             </td>
                             <td className="py-2 pr-4 text-right text-xs">{formatCurrency(trade.size)}</td>
-                            <td className={cn("py-2 text-right text-xs font-medium", trade.pnl !== undefined && trade.pnl >= 0 ? "text-green-400" : "text-red-400")}>
+                            <td className={cn("py-2 pr-4 text-right text-xs font-medium", trade.pnl !== undefined && trade.pnl >= 0 ? "text-green-400" : "text-red-400")}>
                               {trade.pnl !== undefined ? formatCurrency(trade.pnl) : "—"}
                             </td>
+                            <td className="py-2 text-xs text-muted-foreground">—</td>
                           </tr>,
                         ]
                       })}

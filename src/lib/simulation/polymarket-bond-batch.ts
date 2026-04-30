@@ -12,16 +12,13 @@ import type {
   PolymarketSimulationBatchCounters,
   SimulatedTradeRow,
 } from "@/types"
+import {
+  entryBandOk,
+  exitPriceForSide,
+  leadingSideAtYesPrice,
+  randomSimId,
+} from "@/lib/simulation/polymarket-sim-shared"
 import { format, startOfMonth } from "date-fns"
-
-function randomId(): string {
-  return Math.random().toString(36).slice(2, 12)
-}
-
-function exitPriceForSide(side: "YES" | "NO", winningOutcomeIndex: 0 | 1): number {
-  if (side === "YES") return winningOutcomeIndex === 0 ? 1 : 0
-  return winningOutcomeIndex === 1 ? 1 : 0
-}
 
 function buildBatchCounters(
   base: Omit<
@@ -143,24 +140,13 @@ function metricsFromPolymarketBatch(
     monthlyReturns,
     platformBreakdown,
     batch: counters,
+    runKind: "closed_batch",
     polymarketMeta: {
       entryRule: "clob_first_candle",
       endWithinDaysApplied: false,
       gammaWinnerField: "outcomePrices_binaryThreshold",
     },
   }
-}
-
-function leadingSideAtYesPrice(yesPx: number): { side: "YES" | "NO"; entryPrice: number; leadingPrice: number } {
-  const noPx = 1 - yesPx
-  if (yesPx >= noPx) return { side: "YES", entryPrice: yesPx, leadingPrice: yesPx }
-  return { side: "NO", entryPrice: noPx, leadingPrice: noPx }
-}
-
-function entryBandOk(leadingPrice: number, params: HighProbabilityBondParams): boolean {
-  if (leadingPrice < params.minPrice) return false
-  if (params.maxPrice != null && leadingPrice > params.maxPrice) return false
-  return true
 }
 
 async function paperTradeOneMarket(
@@ -192,7 +178,7 @@ async function paperTradeOneMarket(
     ok: true,
     row: {
       source: "polymarket",
-      id: randomId(),
+      id: randomSimId(),
       slug: market.slug,
       question: market.question,
       tokenId,

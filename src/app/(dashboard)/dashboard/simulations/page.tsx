@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, PlayCircle, ChevronUp, Eye } from "lucide-react"
 import type { SimulationMetrics } from "@/types"
 import { formatCurrency, formatPct } from "@/lib/utils"
@@ -19,6 +20,8 @@ interface Strategy {
   config?: { templateId?: string }
 }
 
+type MetricsWithRun = SimulationMetrics & { runKind?: "closed_batch" | "historical" }
+
 interface Simulation {
   id: string
   name: string
@@ -26,7 +29,7 @@ interface Simulation {
   platform: string
   initialCapital: number
   createdAt: string
-  metrics: SimulationMetrics | null
+  metrics: MetricsWithRun | null
   strategy: { name: string; platform: string }
 }
 
@@ -34,18 +37,37 @@ function isBondPolymarketStrategy(s: Strategy): boolean {
   return s.platform === "polymarket" && s.config?.templateId === "high_probability_bond"
 }
 
+function localInputValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function SimulationsPage() {
   const [simulations, setSimulations] = useState<Simulation[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [runTab, setRunTab] = useState<"batch" | "historical">("batch")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [toast, setToast] = useState("")
+
+  const defaultHistoricalRange = useMemo(() => {
+    const end = new Date()
+    end.setMinutes(0, 0, 0)
+    const start = new Date(end)
+    start.setDate(start.getDate() - 90)
+    start.setHours(0, 0, 0, 0)
+    return { start: localInputValue(start), end: localInputValue(end) }
+  }, [])
+
   const [form, setForm] = useState({
     strategyId: "",
     name: "",
     initialCapital: 1000,
     maxMarkets: 25,
+    histStart: defaultHistoricalRange.start,
+    histEnd: defaultHistoricalRange.end,
+    maxMarketsHistorical: 25,
   })
 
   const eligibleStrategies = strategies.filter(isBondPolymarketStrategy)
@@ -60,7 +82,7 @@ export default function SimulationsPage() {
     fetchData()
   }, [])
 
-  async function handleRun(e: React.FormEvent) {
+  async function handleRunBatch(e: React.FormEvent) {
     e.preventDefault()
     setError("")
     setLoading(true)
@@ -90,6 +112,40 @@ export default function SimulationsPage() {
     }
   }
 
+  async function handleRunHistorical(e: React.FormEvent) {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      const startDate = new Date(form.histStart)
+      const endDate = new Date(form.histEnd)
+      const res = await fetch("/api/polymarket/simulate-historical", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          strategyId: form.strategyId,
+          name: form.name,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          initialCapital: form.initialCapital,
+          maxMarkets: form.maxMarketsHistorical,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Request failed")
+        return
+      }
+      setShowForm(false)
+      fetchData()
+      showToast("Historical simulation completed successfully")
+    } catch {
+      setError("Failed to run simulation")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(""), 3000)
@@ -106,8 +162,8 @@ export default function SimulationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Simulations</h1>
           <p className="text-muted-foreground mt-1">
-            Run a closed-market Polymarket batch (Gamma + CLOB): saved High-probability bond strategy, first CLOB candle
-            entry, resolution exit. Historical batch is limited to 25 markets per server run.
+            Polymarket paper runs using your saved High-probability bond strategy: a fast closed batch, or a dated
+            historical dry-run with TP/SL and portfolio limits.
           </p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
@@ -131,13 +187,7 @@ export default function SimulationsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Run simulation</CardTitle>
-            <CardDescription>
-              Fetches up to 25 resolved Polymarket markets from Gamma (<code className="text-xs">closed=true</code>),
-              filters with your bond parameters (resolution window <code className="text-xs">endWithinDays</code> is{" "}
-              <strong className="font-medium">not</strong> applied on this batch). Entry price is the{" "}
-              <strong className="font-medium">earliest</strong> point in the CLOB history series for the YES token; exit
-              is the resolved payout for the side implied at that first print.
-            </CardDescription>
+            <CardDescription>Choose closed batch (snapshot) or historical time-walk (CLOB replay in a date window).</CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
@@ -145,68 +195,173 @@ export default function SimulationsPage() {
                 {error}
               </div>
             )}
-            <form onSubmit={handleRun} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Simulation name</Label>
-                  <Input
-                    placeholder="e.g. Closed bond batch — Apr 2026"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Strategy</Label>
-                  <Select value={form.strategyId} onValueChange={(v) => setForm({ ...form, strategyId: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select bond strategy…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {eligibleStrategies.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <Tabs value={runTab} onValueChange={(v) => setRunTab(v as "batch" | "historical")}>
+              <TabsList className="grid w-full max-w-lg grid-cols-2">
+                <TabsTrigger value="batch">Closed batch</TabsTrigger>
+                <TabsTrigger value="historical">Historical dry-run</TabsTrigger>
+              </TabsList>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Markets to fetch (max 25)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={25}
-                    value={form.maxMarkets}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        maxMarkets: Math.min(25, Math.max(1, parseInt(e.target.value, 10) || 1)),
-                      })
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Initial capital ($)</Label>
-                  <Input
-                    type="number"
-                    min={100}
-                    value={form.initialCapital}
-                    onChange={(e) => setForm({ ...form, initialCapital: parseFloat(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
+              <TabsContent value="batch" className="mt-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Fetches up to 25 resolved markets (<code className="text-xs">closed=true</code>).{" "}
+                  <code className="text-xs">endWithinDays</code> is <strong className="font-medium">not</strong> applied.
+                  Entry = earliest CLOB point; exit = resolution payout from first-candle side.
+                </p>
+                <form onSubmit={handleRunBatch} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Simulation name</Label>
+                      <Input
+                        placeholder="e.g. Closed bond batch"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Strategy</Label>
+                      <Select value={form.strategyId} onValueChange={(v) => setForm({ ...form, strategyId: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select bond strategy…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eligibleStrategies.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Markets (max 25)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={25}
+                        value={form.maxMarkets}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            maxMarkets: Math.min(25, Math.max(1, parseInt(e.target.value, 10) || 1)),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Initial capital ($)</Label>
+                      <Input
+                        type="number"
+                        min={100}
+                        value={form.initialCapital}
+                        onChange={(e) => setForm({ ...form, initialCapital: parseFloat(e.target.value) })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={loading || !form.strategyId || eligibleStrategies.length === 0}>
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    {loading ? "Running…" : "Run closed batch"}
+                  </Button>
+                </form>
+              </TabsContent>
 
-              <Button type="submit" disabled={loading || !form.strategyId || eligibleStrategies.length === 0}>
-                <PlayCircle className="w-4 h-4 mr-2" />
-                {loading ? "Running…" : "Run Polymarket batch"}
-              </Button>
-            </form>
+              <TabsContent value="historical" className="mt-4 space-y-4">
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-200/90 space-y-2">
+                  <p>
+                    Uses <strong className="font-medium">real Gamma + CLOB</strong> history. Liquidity/volume filters use{" "}
+                    <strong className="font-medium">current</strong> Gamma fields (not point-in-time at your start date).
+                    Large market counts can approach the server time limit (60s).
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    End date must be in the past. <code>endWithinDays</code> is evaluated from your simulation start date.
+                  </p>
+                </div>
+                <form onSubmit={handleRunHistorical} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Simulation name</Label>
+                      <Input
+                        placeholder="e.g. Q1 2025 historical dry-run"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Strategy</Label>
+                      <Select value={form.strategyId} onValueChange={(v) => setForm({ ...form, strategyId: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select bond strategy…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {eligibleStrategies.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Simulation start (local)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={form.histStart}
+                        onChange={(e) => setForm({ ...form, histStart: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Simulation end (local, must be past)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={form.histEnd}
+                        onChange={(e) => setForm({ ...form, histEnd: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Markets to fetch (max 100)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={form.maxMarketsHistorical}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            maxMarketsHistorical: Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label>Initial capital ($)</Label>
+                      <Input
+                        type="number"
+                        min={100}
+                        value={form.initialCapital}
+                        onChange={(e) => setForm({ ...form, initialCapital: parseFloat(e.target.value) })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={loading || !form.strategyId || eligibleStrategies.length === 0}>
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    {loading ? "Running…" : "Run historical dry-run"}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}
@@ -216,7 +371,7 @@ export default function SimulationsPage() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <PlayCircle className="w-12 h-12 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground mb-4">No simulations yet. Run your first batch.</p>
+              <p className="text-muted-foreground mb-4">No simulations yet. Run your first simulation.</p>
             </CardContent>
           </Card>
         ) : (
@@ -225,7 +380,7 @@ export default function SimulationsPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold">{sim.name}</h3>
                       <Badge
                         variant={
@@ -242,6 +397,16 @@ export default function SimulationsPage() {
                       <Badge variant="outline" className="capitalize text-xs">
                         {sim.platform}
                       </Badge>
+                      {sim.metrics?.runKind === "historical" && (
+                        <Badge variant="secondary" className="text-xs">
+                          Historical
+                        </Badge>
+                      )}
+                      {sim.metrics?.runKind === "closed_batch" && (
+                        <Badge variant="secondary" className="text-xs">
+                          Closed batch
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mb-3">
                       Strategy: {sim.strategy.name} · Capital: {formatCurrency(sim.initialCapital)}
