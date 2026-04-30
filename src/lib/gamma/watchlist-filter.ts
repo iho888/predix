@@ -142,3 +142,33 @@ export function filterMarketsByBondParams(
   })
   return rows
 }
+
+/**
+ * Closed resolved markets only: same price / volume / liquidity gates as live bond scan,
+ * but **requires** `closed === true`, ignores `active` / `accepting_orders`, and does **not**
+ * apply `endWithinDays` (MVP — see simulations plan).
+ */
+export function filterClosedMarketsByBondParams(
+  markets: GammaMarket[],
+  params: HighProbabilityBondParams
+): GammaMarket[] {
+  const out: GammaMarket[] = []
+  for (const m of markets) {
+    if (!Boolean(m.closed)) continue
+    const entry = marketToEntry(m)
+    if (!entry) continue
+    if (entry.maxPrice < params.minPrice) continue
+    if (params.maxPrice != null && entry.maxPrice > params.maxPrice) continue
+    if (entry.liquidityNum != null && entry.liquidityNum < params.minLiquidityNum) continue
+    if (entry.volumeNum != null && entry.volumeNum < params.minVolumeNum) continue
+    out.push(m)
+  }
+  out.sort((a, b) => {
+    const ea = marketToEntry(a)
+    const eb = marketToEntry(b)
+    if (!ea || !eb) return 0
+    if (eb.maxPrice !== ea.maxPrice) return eb.maxPrice - ea.maxPrice
+    return (eb.liquidityNum ?? 0) - (ea.liquidityNum ?? 0)
+  })
+  return out
+}

@@ -1,25 +1,24 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, PlayCircle, ChevronUp, Eye } from "lucide-react"
-import { SimulationMetrics } from "@/types"
+import type { SimulationMetrics } from "@/types"
 import { formatCurrency, formatPct } from "@/lib/utils"
-import { PolymarketDryRunPanel } from "@/components/simulations/PolymarketDryRunPanel"
 
 interface Strategy {
   id: string
   name: string
   platform: string
+  config?: { templateId?: string }
 }
+
 interface Simulation {
   id: string
   name: string
@@ -31,29 +30,25 @@ interface Simulation {
   strategy: { name: string; platform: string }
 }
 
-function SimulationsContent() {
-  const searchParams = useSearchParams()
+function isBondPolymarketStrategy(s: Strategy): boolean {
+  return s.platform === "polymarket" && s.config?.templateId === "high_probability_bond"
+}
+
+export default function SimulationsPage() {
   const [simulations, setSimulations] = useState<Simulation[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [runTab, setRunTab] = useState<"synthetic" | "polymarket">("synthetic")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [toast, setToast] = useState("")
   const [form, setForm] = useState({
     strategyId: "",
     name: "",
-    startDate: "2024-01-01",
-    endDate: "2024-06-30",
     initialCapital: 1000,
+    maxMarkets: 25,
   })
 
-  useEffect(() => {
-    if (searchParams.get("tab") === "polymarket") {
-      setRunTab("polymarket")
-      setShowForm(true)
-    }
-  }, [searchParams])
+  const eligibleStrategies = strategies.filter(isBondPolymarketStrategy)
 
   async function fetchData() {
     const [simsRes, stratsRes] = await Promise.all([fetch("/api/simulations"), fetch("/api/strategies")])
@@ -70,14 +65,19 @@ function SimulationsContent() {
     setError("")
     setLoading(true)
     try {
-      const res = await fetch("/api/simulations", {
+      const res = await fetch("/api/polymarket/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          strategyId: form.strategyId,
+          name: form.name,
+          initialCapital: form.initialCapital,
+          maxMarkets: form.maxMarkets,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error)
+        setError(data.error ?? "Request failed")
         return
       }
       setShowForm(false)
@@ -106,7 +106,8 @@ function SimulationsContent() {
         <div>
           <h1 className="text-3xl font-bold">Simulations</h1>
           <p className="text-muted-foreground mt-1">
-            Backtest saved strategies on synthetic data, or run a Polymarket dry run (public APIs, no orders).
+            Run a closed-market Polymarket batch (Gamma + CLOB): saved High-probability bond strategy, first CLOB candle
+            entry, resolution exit. Historical batch is limited to 25 markets per server run.
           </p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
@@ -115,13 +116,14 @@ function SimulationsContent() {
         </Button>
       </div>
 
-      {strategies.length === 0 && (
+      {eligibleStrategies.length === 0 && (
         <div className="p-4 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
-          You need at least one strategy before running a synthetic simulation.{" "}
+          You need a saved <strong className="font-medium">Polymarket</strong> strategy using the{" "}
+          <strong className="font-medium">High-probability bond</strong> template.{" "}
           <Link href="/dashboard/strategies" className="underline">
-            Create a strategy
+            Create or edit a strategy
           </Link>
-          . Polymarket dry run uses the separate strategy registry and does not require a saved strategy.
+          .
         </div>
       )}
 
@@ -129,89 +131,82 @@ function SimulationsContent() {
         <Card>
           <CardHeader>
             <CardTitle>Run simulation</CardTitle>
-            <CardDescription>Choose synthetic backtest (saved strategy) or Polymarket paper replay.</CardDescription>
+            <CardDescription>
+              Fetches up to 25 resolved Polymarket markets from Gamma (<code className="text-xs">closed=true</code>),
+              filters with your bond parameters (resolution window <code className="text-xs">endWithinDays</code> is{" "}
+              <strong className="font-medium">not</strong> applied on this batch). Entry price is the{" "}
+              <strong className="font-medium">earliest</strong> point in the CLOB history series for the YES token; exit
+              is the resolved payout for the side implied at that first print.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={runTab} onValueChange={(v) => setRunTab(v as "synthetic" | "polymarket")}>
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="synthetic">Synthetic data</TabsTrigger>
-                <TabsTrigger value="polymarket">Polymarket dry run</TabsTrigger>
-              </TabsList>
-              <TabsContent value="synthetic" className="mt-4">
-                {error && runTab === "synthetic" && (
-                  <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                    {error}
-                  </div>
-                )}
-                <form onSubmit={handleRun} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Simulation name</Label>
-                      <Input
-                        placeholder="e.g. Q1 2024 backtest"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Strategy</Label>
-                      <Select value={form.strategyId} onValueChange={(v) => setForm({ ...form, strategyId: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select strategy…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {strategies.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+            {error && (
+              <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleRun} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Simulation name</Label>
+                  <Input
+                    placeholder="e.g. Closed bond batch — Apr 2026"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Strategy</Label>
+                  <Select value={form.strategyId} onValueChange={(v) => setForm({ ...form, strategyId: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select bond strategy…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eligibleStrategies.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Start date</Label>
-                      <Input
-                        type="date"
-                        value={form.startDate}
-                        onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>End date</Label>
-                      <Input
-                        type="date"
-                        value={form.endDate}
-                        onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Initial capital ($)</Label>
-                      <Input
-                        type="number"
-                        min={100}
-                        value={form.initialCapital}
-                        onChange={(e) => setForm({ ...form, initialCapital: parseFloat(e.target.value) })}
-                        required
-                      />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Markets to fetch (max 25)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={25}
+                    value={form.maxMarkets}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        maxMarkets: Math.min(25, Math.max(1, parseInt(e.target.value, 10) || 1)),
+                      })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Initial capital ($)</Label>
+                  <Input
+                    type="number"
+                    min={100}
+                    value={form.initialCapital}
+                    onChange={(e) => setForm({ ...form, initialCapital: parseFloat(e.target.value) })}
+                    required
+                  />
+                </div>
+              </div>
 
-                  <Button type="submit" disabled={loading || !form.strategyId || strategies.length === 0}>
-                    <PlayCircle className="w-4 h-4 mr-2" />
-                    {loading ? "Running…" : "Run synthetic simulation"}
-                  </Button>
-                </form>
-              </TabsContent>
-              <TabsContent value="polymarket" className="mt-4">
-                <PolymarketDryRunPanel />
-              </TabsContent>
-            </Tabs>
+              <Button type="submit" disabled={loading || !form.strategyId || eligibleStrategies.length === 0}>
+                <PlayCircle className="w-4 h-4 mr-2" />
+                {loading ? "Running…" : "Run Polymarket batch"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       )}
@@ -221,7 +216,7 @@ function SimulationsContent() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <PlayCircle className="w-12 h-12 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground mb-4">No simulations yet. Run your first backtest.</p>
+              <p className="text-muted-foreground mb-4">No simulations yet. Run your first batch.</p>
             </CardContent>
           </Card>
         ) : (
@@ -306,20 +301,5 @@ function SimulationsContent() {
         )}
       </div>
     </div>
-  )
-}
-
-export default function SimulationsPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="max-w-5xl space-y-4 p-6">
-          <div className="h-8 w-48 rounded-md bg-muted animate-pulse" />
-          <div className="h-32 rounded-md bg-muted animate-pulse" />
-        </div>
-      }
-    >
-      <SimulationsContent />
-    </Suspense>
   )
 }

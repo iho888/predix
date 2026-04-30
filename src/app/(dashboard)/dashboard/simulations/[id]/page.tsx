@@ -1,7 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell
@@ -9,9 +8,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, TrendingUp, TrendingDown } from "lucide-react"
-import { SimulationMetrics, Trade } from "@/types"
+import { ArrowLeft, Download } from "lucide-react"
+import type { PolymarketSimulationBatchCounters, SimulationMetrics, SimulatedTradeRow, Trade } from "@/types"
 import { formatCurrency, formatPct, cn } from "@/lib/utils"
+
+type MetricsView = SimulationMetrics & {
+  batch?: PolymarketSimulationBatchCounters
+  polymarketMeta?: { entryRule: string; endWithinDaysApplied: boolean; gammaWinnerField: string }
+}
 
 interface SimDetail {
   id: string
@@ -21,8 +25,8 @@ interface SimDetail {
   initialCapital: number
   startDate: string
   endDate: string
-  metrics: SimulationMetrics | null
-  trades: Trade[]
+  metrics: MetricsView | null
+  trades: unknown[]
   strategy: { name: string; platform: string }
 }
 
@@ -40,6 +44,24 @@ function StatCard({ label, value, sub, positive }: { label: string; value: strin
   )
 }
 
+function isPolymarketStoredTrade(t: unknown): t is Extract<SimulatedTradeRow, { source: "polymarket" }> {
+  return (
+    typeof t === "object" &&
+    t !== null &&
+    "source" in t &&
+    (t as { source: string }).source === "polymarket" &&
+    "slug" in t &&
+    "side" in t &&
+    "id" in t
+  )
+}
+
+function asLegacyTrade(t: unknown): Trade | null {
+  if (typeof t !== "object" || t === null || !("marketTitle" in t) || !("id" in t)) return null
+  if ("source" in t && (t as { source: string }).source === "polymarket") return null
+  return t as Trade
+}
+
 export default function SimulationDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -49,7 +71,10 @@ export default function SimulationDetailPage() {
   useEffect(() => {
     fetch(`/api/simulations/${params.id}`)
       .then((r) => r.json())
-      .then((d) => { setSim(d); setLoading(false) })
+      .then((d) => {
+        setSim(d)
+        setLoading(false)
+      })
   }, [params.id])
 
   function handleExport() {
@@ -65,21 +90,45 @@ export default function SimulationDetailPage() {
 
   function handleExportCSV() {
     if (!sim || sim.trades.length === 0) return
-    const headers = ["market", "platform", "outcome", "entryDate", "exitDate", "entryPrice", "exitPrice", "size", "pnl", "pnlPct", "exitReason"]
-    const rows = sim.trades.map((t) => [
-      `"${t.marketTitle.replace(/"/g, '""')}"`,
-      t.platform,
-      t.outcome,
-      t.entryDate,
-      t.exitDate ?? "",
-      t.entryPrice,
-      t.exitPrice ?? "",
-      t.size,
-      t.pnl ?? "",
-      t.pnlPct ?? "",
-      t.exitReason ?? "",
-    ])
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
+    const lines: string[][] = []
+    const first = sim.trades[0]
+    if (isPolymarketStoredTrade(first)) {
+      lines.push(["slug", "question", "side", "entryPrice", "exitPrice", "positionUsd", "pnl", "won", "entryRule"])
+      for (const raw of sim.trades) {
+        if (!isPolymarketStoredTrade(raw)) continue
+        lines.push([
+          raw.slug,
+          `"${raw.question.replace(/"/g, '""')}"`,
+          raw.side,
+          String(raw.entryPrice),
+          String(raw.exitPrice),
+          String(raw.positionSizeUsd),
+          String(raw.pnl),
+          raw.won ? "true" : "false",
+          raw.entryRule,
+        ])
+      }
+    } else {
+      lines.push(["market", "platform", "outcome", "entryDate", "exitDate", "entryPrice", "exitPrice", "size", "pnl", "pnlPct", "exitReason"])
+      for (const raw of sim.trades) {
+        const t = asLegacyTrade(raw)
+        if (!t) continue
+        lines.push([
+          `"${String(t.marketTitle).replace(/"/g, '""')}"`,
+          t.platform,
+          t.outcome,
+          String(t.entryDate),
+          t.exitDate != null ? String(t.exitDate) : "",
+          String(t.entryPrice),
+          t.exitPrice != null ? String(t.exitPrice) : "",
+          String(t.size),
+          t.pnl != null ? String(t.pnl) : "",
+          t.pnlPct != null ? String(t.pnlPct) : "",
+          t.exitReason ?? "",
+        ])
+      }
+    }
+    const csv = lines.map((r) => r.join(",")).join("\n")
     const blob = new Blob([csv], { type: "text/csv" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -117,6 +166,7 @@ export default function SimulationDetailPage() {
   if (!sim) return <div>Simulation not found</div>
 
   const m = sim.metrics
+  const batch = m?.batch
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -151,7 +201,6 @@ export default function SimulationDetailPage() {
         <Card><CardContent className="py-12 text-center text-muted-foreground">No metrics available</CardContent></Card>
       ) : (
         <>
-          {/* Key metrics grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total ROI" value={formatPct(m.roi)} positive={m.roi >= 0} sub={formatCurrency(m.totalPnL)} />
             <StatCard label="Final Capital" value={formatCurrency(m.finalCapital)} sub={`started at ${formatCurrency(m.initialCapital)}`} />
@@ -163,7 +212,27 @@ export default function SimulationDetailPage() {
             <StatCard label="Avg Win / Loss" value={`${formatCurrency(m.avgWin)} / ${formatCurrency(m.avgLoss)}`} />
           </div>
 
-          {/* Equity curve */}
+          {batch && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Batch diagnostics</CardTitle></CardHeader>
+              <CardContent className="text-sm text-muted-foreground grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>Gamma rows fetched: <span className="text-foreground font-medium">{batch.totalSlugsFetched}</span></div>
+                <div>Bond filter match: <span className="text-foreground font-medium">{batch.matchedMarkets}</span></div>
+                <div>Match rate: <span className="text-foreground font-medium">{batch.matchRate}%</span></div>
+                <div>Skipped (no history): <span className="text-foreground font-medium">{batch.skippedNoHistory}</span></div>
+                <div>Skipped (non-binary / neg_risk): <span className="text-foreground font-medium">{batch.skippedNonBinary}</span></div>
+                <div>Skipped (filter): <span className="text-foreground font-medium">{batch.skippedNoMatch}</span></div>
+                <div>Skipped (entry band @ first candle): <span className="text-foreground font-medium">{batch.skippedEntryBand}</span></div>
+                {m.polymarketMeta && (
+                  <div className="col-span-2 md:col-span-4 text-xs pt-2 border-t border-border/40">
+                    Entry rule: {m.polymarketMeta.entryRule} · <code>endWithinDays</code> applied:{" "}
+                    {String(m.polymarketMeta.endWithinDaysApplied)} · Winner field: {m.polymarketMeta.gammaWinnerField}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {m.equityCurve.length > 1 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Equity Curve</CardTitle></CardHeader>
@@ -184,7 +253,6 @@ export default function SimulationDetailPage() {
             </Card>
           )}
 
-          {/* Monthly returns */}
           {m.monthlyReturns.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Monthly Returns</CardTitle></CardHeader>
@@ -209,7 +277,6 @@ export default function SimulationDetailPage() {
             </Card>
           )}
 
-          {/* Platform breakdown */}
           {Object.keys(m.platformBreakdown).length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Platform Breakdown</CardTitle></CardHeader>
@@ -230,7 +297,6 @@ export default function SimulationDetailPage() {
             </Card>
           )}
 
-          {/* Trades table */}
           {sim.trades.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Trades ({sim.trades.length})</CardTitle></CardHeader>
@@ -249,23 +315,47 @@ export default function SimulationDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {sim.trades.slice(0, 50).map((trade) => (
-                        <tr key={trade.id} className="border-b border-border/20 last:border-0">
-                          <td className="py-2 pr-4 max-w-[180px] truncate text-xs">{trade.marketTitle}</td>
-                          <td className="py-2 pr-4 capitalize text-xs text-muted-foreground">{trade.platform}</td>
-                          <td className="py-2 pr-4">
-                            <Badge variant={trade.outcome === "YES" ? "success" : "secondary"} className="text-xs">{trade.outcome}</Badge>
-                          </td>
-                          <td className="py-2 pr-4 text-right text-xs">{(trade.entryPrice * 100).toFixed(1)}¢</td>
-                          <td className="py-2 pr-4 text-right text-xs">
-                            {trade.exitPrice ? `${(trade.exitPrice * 100).toFixed(1)}¢` : "—"}
-                          </td>
-                          <td className="py-2 pr-4 text-right text-xs">{formatCurrency(trade.size)}</td>
-                          <td className={cn("py-2 text-right text-xs font-medium", trade.pnl !== undefined && trade.pnl >= 0 ? "text-green-400" : "text-red-400")}>
-                            {trade.pnl !== undefined ? formatCurrency(trade.pnl) : "—"}
-                          </td>
-                        </tr>
-                      ))}
+                      {sim.trades.slice(0, 50).flatMap((raw) => {
+                        if (isPolymarketStoredTrade(raw)) {
+                          return [
+                            <tr key={raw.id} className="border-b border-border/20 last:border-0">
+                              <td className="py-2 pr-4 max-w-[220px] text-xs">
+                                <span className="text-muted-foreground">{raw.slug}</span>
+                                <div className="truncate text-foreground">{raw.question}</div>
+                              </td>
+                              <td className="py-2 pr-4 capitalize text-xs text-muted-foreground">polymarket</td>
+                              <td className="py-2 pr-4">
+                                <Badge variant={raw.side === "YES" ? "success" : "secondary"} className="text-xs">{raw.side}</Badge>
+                              </td>
+                              <td className="py-2 pr-4 text-right text-xs">{(raw.entryPrice * 100).toFixed(1)}¢</td>
+                              <td className="py-2 pr-4 text-right text-xs">{(raw.exitPrice * 100).toFixed(1)}¢</td>
+                              <td className="py-2 pr-4 text-right text-xs">{formatCurrency(raw.positionSizeUsd)}</td>
+                              <td className={cn("py-2 text-right text-xs font-medium", raw.pnl >= 0 ? "text-green-400" : "text-red-400")}>
+                                {formatCurrency(raw.pnl)}
+                              </td>
+                            </tr>,
+                          ]
+                        }
+                        const trade = asLegacyTrade(raw)
+                        if (!trade) return []
+                        return [
+                          <tr key={trade.id} className="border-b border-border/20 last:border-0">
+                            <td className="py-2 pr-4 max-w-[180px] truncate text-xs">{trade.marketTitle}</td>
+                            <td className="py-2 pr-4 capitalize text-xs text-muted-foreground">{trade.platform}</td>
+                            <td className="py-2 pr-4">
+                              <Badge variant={trade.outcome === "YES" ? "success" : "secondary"} className="text-xs">{trade.outcome}</Badge>
+                            </td>
+                            <td className="py-2 pr-4 text-right text-xs">{(trade.entryPrice * 100).toFixed(1)}¢</td>
+                            <td className="py-2 pr-4 text-right text-xs">
+                              {trade.exitPrice != null ? `${(trade.exitPrice * 100).toFixed(1)}¢` : "—"}
+                            </td>
+                            <td className="py-2 pr-4 text-right text-xs">{formatCurrency(trade.size)}</td>
+                            <td className={cn("py-2 text-right text-xs font-medium", trade.pnl !== undefined && trade.pnl >= 0 ? "text-green-400" : "text-red-400")}>
+                              {trade.pnl !== undefined ? formatCurrency(trade.pnl) : "—"}
+                            </td>
+                          </tr>,
+                        ]
+                      })}
                     </tbody>
                   </table>
                   {sim.trades.length > 50 && (

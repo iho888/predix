@@ -1,7 +1,7 @@
+import type { GammaMarket } from "@/lib/gamma/watchlist-filter"
 import type { SimulationMarket } from "./types"
 
 const DEFAULT_GAMMA = "https://gamma-api.polymarket.com"
-
 function baseUrl(): string {
   return (process.env.GAMMA_BASE_URL ?? DEFAULT_GAMMA).replace(/\/+$/, "")
 }
@@ -35,7 +35,7 @@ function binaryWinnerIndex(prices: [number, number]): 0 | 1 | null {
   return null
 }
 
-function rawToSimulationMarket(row: Record<string, unknown>): SimulationMarket | null {
+export function rawToSimulationMarket(row: Record<string, unknown>): SimulationMarket | null {
   const outcomes = parseJsonArray(row.outcomes).map((o) => String(o))
   const tokenIds = parseJsonArray(row.clobTokenIds).map((o) => String(o))
   const priceRaw = parseJsonArray(row.outcomePrices).map(toNum)
@@ -110,6 +110,41 @@ export async function searchClosedMarkets(query: string, limit = 15): Promise<Cl
       out.push({ slug: m.slug, question: m.question, closed: m.closed })
       if (out.length >= limit) break
     }
+  }
+  return out
+}
+
+/** §5.2: binary YES/NO only; `neg_risk === true` excluded (missing treated as false). */
+export function passesPolymarketBatchBinaryGate(row: Record<string, unknown>): boolean {
+  if (row.neg_risk === true) return false
+  const m = rawToSimulationMarket(row)
+  return m != null && m.closed
+}
+
+/**
+ * Paginated closed markets from Gamma (`closed=true`). Params should stay aligned with
+ * https://docs.polymarket.com/developers/gamma-markets-api/get-markets
+ */
+export async function fetchClosedMarkets(options: {
+  limit: number
+  offset?: number
+}): Promise<GammaMarket[]> {
+  const limit = Math.min(25, Math.max(1, Math.floor(options.limit)))
+  const offset = Math.max(0, Math.floor(options.offset ?? 0))
+  const root = baseUrl()
+  const params = new URLSearchParams()
+  params.set("closed", "true")
+  params.set("limit", String(limit))
+  params.set("offset", String(offset))
+
+  const res = await fetch(`${root}/markets?${params}`, { cache: "no-store" })
+  if (!res.ok) return []
+  const batch: unknown = await res.json()
+  if (!Array.isArray(batch)) return []
+
+  const out: GammaMarket[] = []
+  for (const item of batch) {
+    if (item && typeof item === "object") out.push(item as GammaMarket)
   }
   return out
 }

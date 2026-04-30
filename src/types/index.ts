@@ -81,6 +81,42 @@ export interface Trade {
   exitReason?: "take_profit" | "stop_loss" | "max_holding" | "resolution"
 }
 
+/** Stored in `Simulation.tradesJson` — discriminated by `source` (legacy rows omit `source` = synthetic). */
+export type SimulatedTradeRow =
+  | ({
+      source: "synthetic"
+    } & {
+      id: string
+      marketId: string
+      marketTitle: string
+      platform: Platform
+      entryDate: string
+      exitDate?: string
+      outcome: "YES" | "NO"
+      entryPrice: number
+      exitPrice?: number
+      size: number
+      pnl?: number
+      pnlPct?: number
+      status: "OPEN" | "CLOSED" | "RESOLVED"
+      exitReason?: "take_profit" | "stop_loss" | "max_holding" | "resolution"
+    })
+  | {
+      source: "polymarket"
+      id: string
+      slug: string
+      question: string
+      tokenId: string
+      side: "YES" | "NO"
+      entryPrice: number
+      exitPrice: number
+      positionSizeUsd: number
+      pnl: number
+      won: boolean
+      entryRule: "clob_first_candle"
+      historyFirstT?: number
+    }
+
 export interface SimulationMetrics {
   totalTrades: number
   winningTrades: number
@@ -103,6 +139,30 @@ export interface SimulationMetrics {
   equityCurve: { date: string; equity: number; drawdown: number }[]
   monthlyReturns: { month: string; return: number; returnPct: number }[]
   platformBreakdown: Record<string, { trades: number; pnl: number; winRate: number }>
+}
+
+export interface PolymarketSimulationBatchCounters {
+  totalSlugsFetched: number
+  matchedMarkets: number
+  skippedNonBinary: number
+  skippedNoMatch: number
+  skippedNoHistory: number
+  skippedEntryBand: number
+  totalTrades: number
+  winningTrades: number
+  matchRate: number
+}
+
+export interface PolymarketSimulationBatchMeta {
+  entryRule: "clob_first_candle"
+  endWithinDaysApplied: false
+  gammaWinnerField: string
+}
+
+/** `metricsJson` for Polymarket closed batch runs: core metrics + batch diagnostics. */
+export type PolymarketBatchSimulationMetrics = SimulationMetrics & {
+  batch: PolymarketSimulationBatchCounters
+  polymarketMeta: PolymarketSimulationBatchMeta
 }
 
 export interface UserSession {
