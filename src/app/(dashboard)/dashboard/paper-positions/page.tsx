@@ -222,14 +222,22 @@ function PositionTable({ rows, mode }: { rows: Position[]; mode: "open" | "close
                 <th className="text-right py-2 px-2">PnL</th>
               </>
             )}
-            <th className="py-2 pl-2 text-right"></th>
           </tr>
         </thead>
         <tbody>
           {rows.map((p) => (
             <tr key={p.id} className="border-b hover:bg-muted/40">
               <td className="py-2 pr-4">
-                <p className="font-medium leading-tight">{p.marketQuestion || p.marketSlug}</p>
+                <a
+                  href={p.urlPath}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium leading-tight hover:underline inline-flex items-center gap-1 group"
+                  title="Open on Polymarket"
+                >
+                  {p.marketQuestion || p.marketSlug}
+                  <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 shrink-0" />
+                </a>
                 <p className="text-xs text-muted-foreground">{p.strategyName}</p>
               </td>
               <td className="text-right py-2 px-2">
@@ -257,11 +265,6 @@ function PositionTable({ rows, mode }: { rows: Position[]; mode: "open" | "close
                   </td>
                 </>
               )}
-              <td className="text-right py-2 pl-2">
-                <a href={p.urlPath} target="_blank" rel="noreferrer" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </td>
             </tr>
           ))}
         </tbody>
