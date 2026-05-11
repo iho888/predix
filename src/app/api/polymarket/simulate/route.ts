@@ -5,7 +5,7 @@ import { runPolymarketBondBatchSimulation } from "@/lib/simulation/polymarket-bo
 import { parseStoredStrategyConfig } from "@/lib/strategy-templates"
 import { z } from "zod"
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 const postSchema = z.object({
   strategyId: z.string().min(1).max(80),

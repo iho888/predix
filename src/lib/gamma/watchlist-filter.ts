@@ -1,4 +1,4 @@
-import type { HighProbabilityBondParams } from "@/types"
+import type { FadeFavoriteParams, HighProbabilityBondParams } from "@/types"
 import { addDays } from "date-fns"
 
 export type GammaMarket = Record<string, unknown>
@@ -141,6 +141,65 @@ export function filterMarketsByBondParams(
     if (b.maxPrice !== a.maxPrice) return b.maxPrice - a.maxPrice
     return (b.liquidityNum ?? 0) - (a.liquidityNum ?? 0)
   })
+  return rows
+}
+
+/**
+ * Filter live Gamma markets for the Fade-the-Favorite strategy. Returns markets
+ * where the YES side is currently in the leader band AND TTR is in the configured
+ * range. Reuses the LiveFilterEntry shape but `leadingOutcome` is always reported
+ * as YES (the side we're fading) and `edgeToPar` is `1 - yesPrice` (NO upside).
+ */
+export function filterMarketsByFadeParams(
+  markets: GammaMarket[],
+  params: FadeFavoriteParams,
+  now: Date = new Date()
+): LiveFilterEntry[] {
+  const rows: LiveFilterEntry[] = []
+  for (const m of markets) {
+    if (!Boolean(m.active) || Boolean(m.closed)) continue
+    if (m.neg_risk === true) continue
+    const outcomes = parseJsonList(m.outcomes)
+    const prices = parseJsonList(m.outcomePrices)
+    const tokens = parseJsonList(m.clobTokenIds)
+    if (outcomes.length !== 2 || prices.length !== 2 || tokens.length !== 2) continue
+
+    const yesPrice = toFloat(prices[0])
+    if (yesPrice == null) continue
+    if (yesPrice < params.leaderMinPrice || yesPrice > params.leaderMaxPrice) continue
+
+    const liq = toFloat(m.liquidityNum)
+    const vol = toFloat(m.volumeNum)
+    if (liq != null && liq < params.minLiquidityNum) continue
+    if (vol != null && vol < params.minVolumeNum) continue
+
+    const rawEnd = m.endDate ?? m.endDateIso
+    const endS = rawEnd != null ? String(rawEnd) : null
+    const end = parseResolutionEndUtc(endS)
+    if (!end) continue
+    const ttrDays = (end.getTime() - now.getTime()) / 86400000
+    if (ttrDays < params.minTtrDays) continue
+    if (params.maxTtrDays != null && ttrDays > params.maxTtrDays) continue
+
+    const slug = String(m.slug ?? "")
+    const mid = m.id
+    rows.push({
+      marketId: mid != null ? String(mid) : slug,
+      slug,
+      question: String(m.question ?? ""),
+      urlPath: slug ? `https://polymarket.com/market/${slug}` : "",
+      leadingOutcome: "YES",
+      maxPrice: Math.round(yesPrice * 1e6) / 1e6,
+      edgeToPar: Math.round((1 - yesPrice) * 1e6) / 1e6,
+      liquidityNum: liq,
+      volumeNum: vol,
+      endDate: endS,
+      active: true,
+      closed: false,
+    })
+  }
+  // Tightest YES-band markets first (closer to 0.50 = more uncertainty = higher EV)
+  rows.sort((a, b) => Math.abs(a.maxPrice - 0.55) - Math.abs(b.maxPrice - 0.55))
   return rows
 }
 

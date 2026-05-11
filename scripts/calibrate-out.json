@@ -1,0 +1,1074 @@
+{
+  "priceBuckets": [
+    [
+      0,
+      0.05
+    ],
+    [
+      0.05,
+      0.1
+    ],
+    [
+      0.1,
+      0.2
+    ],
+    [
+      0.2,
+      0.3
+    ],
+    [
+      0.3,
+      0.4
+    ],
+    [
+      0.4,
+      0.5
+    ],
+    [
+      0.5,
+      0.6
+    ],
+    [
+      0.6,
+      0.7
+    ],
+    [
+      0.7,
+      0.8
+    ],
+    [
+      0.8,
+      0.9
+    ],
+    [
+      0.9,
+      0.95
+    ],
+    [
+      0.95,
+      1
+    ]
+  ],
+  "ttrBuckets": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      7,
+      14
+    ],
+    [
+      14,
+      30
+    ],
+    [
+      30,
+      60
+    ],
+    [
+      60,
+      180
+    ],
+    [
+      180,
+      9999
+    ]
+  ],
+  "cells": [
+    [
+      {
+        "yesN": 4741,
+        "yesSumPnl": -4257.666666666666,
+        "yesSumSqPnl": 24885.444444444445,
+        "yesWins": 12,
+        "noN": 4741,
+        "noSumPnl": 28.302730457535937,
+        "noSumSqPnl": 12.933067693557245,
+        "noWins": 4729
+      },
+      {
+        "yesN": 12364,
+        "yesSumPnl": -2779.8445987090536,
+        "yesSumSqPnl": 2440215.9976543942,
+        "yesWins": 54,
+        "noN": 12364,
+        "noSumPnl": 37.38832561564447,
+        "noSumSqPnl": 56.07264030599818,
+        "noWins": 12310
+      },
+      {
+        "yesN": 24963,
+        "yesSumPnl": -9769.007381690828,
+        "yesSumSqPnl": 1915093.7802253962,
+        "yesWins": 176,
+        "noN": 24963,
+        "noSumPnl": 28.038436001952054,
+        "noSumSqPnl": 180.68563836929692,
+        "noWins": 24787
+      },
+      {
+        "yesN": 42800,
+        "yesSumPnl": -25182.741295516425,
+        "yesSumSqPnl": 1737496.5533460048,
+        "yesWins": 330,
+        "noN": 42800,
+        "noSumPnl": 67.45311704425171,
+        "noSumSqPnl": 339.32289297675516,
+        "noWins": 42470
+      },
+      {
+        "yesN": 112840,
+        "yesSumPnl": -86255.14859479704,
+        "yesSumSqPnl": 2036234.8108189353,
+        "yesWins": 413,
+        "noN": 112840,
+        "noSumPnl": 770.6593252676989,
+        "noSumSqPnl": 442.2843952122647,
+        "noWins": 112427
+      },
+      {
+        "yesN": 277962,
+        "yesSumPnl": -225806.61226589466,
+        "yesSumSqPnl": 2892279.912169542,
+        "yesWins": 1290,
+        "noN": 277962,
+        "noSumPnl": 2156.0466377324697,
+        "noSumSqPnl": 1383.5569428895412,
+        "noWins": 276672
+      },
+      {
+        "yesN": 810345,
+        "yesSumPnl": -553483.780186066,
+        "yesSumSqPnl": 9258339.580315283,
+        "yesWins": 8461,
+        "noN": 810345,
+        "noSumPnl": 4974.0560807011825,
+        "noSumSqPnl": 8872.197615713558,
+        "noWins": 801884
+      },
+      {
+        "yesN": 347313,
+        "yesSumPnl": -220094.24518003815,
+        "yesSumSqPnl": 8582147.880243577,
+        "yesWins": 3944,
+        "noN": 347313,
+        "noSumPnl": 2553.4947837845425,
+        "noSumSqPnl": 4152.697913992319,
+        "noWins": 343369
+      }
+    ],
+    [
+      {
+        "yesN": 541,
+        "yesSumPnl": -21.209790209790185,
+        "yesSumSqPnl": 8886.685363587463,
+        "yesWins": 29,
+        "noN": 541,
+        "noSumPnl": 7.3457738771790515,
+        "noSumSqPnl": 31.7222033075182,
+        "noWins": 512
+      },
+      {
+        "yesN": 1090,
+        "yesSumPnl": -700.4903429903429,
+        "yesSumSqPnl": 6514.404416346224,
+        "yesWins": 25,
+        "noN": 1090,
+        "noSumPnl": 51.69513883692361,
+        "noSumSqPnl": 30.80135360021996,
+        "noWins": 1065
+      },
+      {
+        "yesN": 2266,
+        "yesSumPnl": -790.8578191880781,
+        "yesSumSqPnl": 19912.96534342464,
+        "yesWins": 109,
+        "noN": 2266,
+        "noSumPnl": 49.82425112280453,
+        "noSumSqPnl": 121.30969766926279,
+        "noWins": 2157
+      },
+      {
+        "yesN": 4935,
+        "yesSumPnl": 17.210040074509223,
+        "yesSumSqPnl": 73917.98416537198,
+        "yesWins": 319,
+        "noN": 4935,
+        "noSumPnl": 8.751242503019819,
+        "noSumSqPnl": 343.3811237478504,
+        "noWins": 4616
+      },
+      {
+        "yesN": 12597,
+        "yesSumPnl": -7125.026510570982,
+        "yesSumSqPnl": 80706.78701637998,
+        "yesWins": 389,
+        "noN": 12597,
+        "noSumPnl": 521.9731932848213,
+        "noSumSqPnl": 460.15412118938167,
+        "noWins": 12208
+      },
+      {
+        "yesN": 42386,
+        "yesSumPnl": -23171.23668074898,
+        "yesSumSqPnl": 302166.77295377303,
+        "yesWins": 1277,
+        "noN": 42386,
+        "noSumPnl": 1727.676561135729,
+        "noSumSqPnl": 1507.6213171055476,
+        "noWins": 41109
+      },
+      {
+        "yesN": 235127,
+        "yesSumPnl": -32554.331300788002,
+        "yesSumSqPnl": 2907214.012256537,
+        "yesWins": 13954,
+        "noN": 235127,
+        "noSumPnl": 2415.552378361058,
+        "noSumSqPnl": 15218.989343622892,
+        "noWins": 221173
+      },
+      {
+        "yesN": 143040,
+        "yesSumPnl": -36520.243372532,
+        "yesSumSqPnl": 1440694.206203202,
+        "yesWins": 7686,
+        "noN": 143040,
+        "noSumPnl": 2684.259740932349,
+        "noSumSqPnl": 8518.95240169562,
+        "noWins": 135354
+      }
+    ],
+    [
+      {
+        "yesN": 464,
+        "yesSumPnl": -122.74592727533903,
+        "yesSumSqPnl": 2037.8522559864493,
+        "yesWins": 53,
+        "noN": 464,
+        "noSumPnl": 18.64459975060944,
+        "noSumSqPnl": 66.00252123708177,
+        "noWins": 411
+      },
+      {
+        "yesN": 1201,
+        "yesSumPnl": -400.5564819926259,
+        "yesSumSqPnl": 4700.375420317865,
+        "yesWins": 128,
+        "noN": 1201,
+        "noSumPnl": 54.42879377813758,
+        "noSumSqPnl": 160.57992248010783,
+        "noWins": 1073
+      },
+      {
+        "yesN": 2179,
+        "yesSumPnl": -542.8073959506812,
+        "yesSumSqPnl": 11640.125490448692,
+        "yesWins": 218,
+        "noN": 2179,
+        "noSumPnl": 113.49936685167224,
+        "noSumSqPnl": 277.12743260255587,
+        "noWins": 1961
+      },
+      {
+        "yesN": 3243,
+        "yesSumPnl": -1084.1567705292014,
+        "yesSumSqPnl": 16564.988050895616,
+        "yesWins": 273,
+        "noN": 3243,
+        "noSumPnl": 218.83639882080888,
+        "noSumSqPnl": 359.34161129091615,
+        "noWins": 2970
+      },
+      {
+        "yesN": 13268,
+        "yesSumPnl": -270.6108553526523,
+        "yesSumSqPnl": 81082.68616265344,
+        "yesWins": 1885,
+        "noN": 13268,
+        "noSumPnl": 11.623626567548552,
+        "noSumSqPnl": 2217.0508107015853,
+        "noWins": 11383
+      },
+      {
+        "yesN": 39111,
+        "yesSumPnl": -1306.6326030756763,
+        "yesSumSqPnl": 244534.31062717934,
+        "yesWins": 5220,
+        "noN": 39111,
+        "noSumPnl": 616.8269029970949,
+        "noSumSqPnl": 6272.631201040062,
+        "noWins": 33891
+      },
+      {
+        "yesN": 185716,
+        "yesSumPnl": -9669.726069185079,
+        "yesSumSqPnl": 1096504.2256848312,
+        "yesWins": 25584,
+        "noN": 185716,
+        "noSumPnl": 832.8446995900346,
+        "noSumSqPnl": 30180.736261119862,
+        "noWins": 160132
+      },
+      {
+        "yesN": 118002,
+        "yesSumPnl": 5325.81893845872,
+        "yesSumSqPnl": 778637.1740712215,
+        "yesWins": 17421,
+        "noN": 118002,
+        "noSumPnl": -1471.0930857772523,
+        "noSumSqPnl": 20071.445116945786,
+        "noWins": 100581
+      }
+    ],
+    [
+      {
+        "yesN": 942,
+        "yesSumPnl": -754.2544504184532,
+        "yesSumSqPnl": 1312.9588972613485,
+        "yesWins": 48,
+        "noN": 942,
+        "noSumPnl": 270.68391467376256,
+        "noSumSqPnl": 163.16646271580774,
+        "noWins": 894
+      },
+      {
+        "yesN": 2430,
+        "yesSumPnl": -1768.1396190503044,
+        "yesSumSqPnl": 3701.3240301326036,
+        "yesWins": 170,
+        "noN": 2430,
+        "noSumPnl": 645.2355527247676,
+        "noSumSqPnl": 466.3656009533594,
+        "noWins": 2260
+      },
+      {
+        "yesN": 1576,
+        "yesSumPnl": -550.3979809461238,
+        "yesSumSqPnl": 3754.4975800635902,
+        "yesWins": 251,
+        "noN": 1576,
+        "noSumPnl": 190.15087851333476,
+        "noSumSqPnl": 400.7679201701674,
+        "noWins": 1325
+      },
+      {
+        "yesN": 2732,
+        "yesSumPnl": -1286.7313440704434,
+        "yesSumSqPnl": 5516.785850440516,
+        "yesWins": 372,
+        "noN": 2732,
+        "noSumPnl": 437.37661392150204,
+        "noSumSqPnl": 655.3546349709986,
+        "noWins": 2360
+      },
+      {
+        "yesN": 8851,
+        "yesSumPnl": 109.94012128989343,
+        "yesSumSqPnl": 28239.10765484474,
+        "yesWins": 2174,
+        "noN": 8851,
+        "noSumPnl": -35.19429749965719,
+        "noSumSqPnl": 2875.9621515309923,
+        "noWins": 6677
+      },
+      {
+        "yesN": 17922,
+        "yesSumPnl": 28.647133119952684,
+        "yesSumSqPnl": 53735.54749941017,
+        "yesWins": 4550,
+        "noN": 17922,
+        "noSumPnl": -261.7799023013903,
+        "noSumSqPnl": 5958.945539694064,
+        "noWins": 13372
+      },
+      {
+        "yesN": 92886,
+        "yesSumPnl": -5629.886420437337,
+        "yesSumSqPnl": 282915.80169518705,
+        "yesWins": 21174,
+        "noN": 92886,
+        "noSumPnl": 1892.4203563833814,
+        "noSumSqPnl": 28765.129608007755,
+        "noWins": 71712
+      },
+      {
+        "yesN": 52603,
+        "yesSumPnl": -9783.451795884292,
+        "yesSumSqPnl": 138944.8182518704,
+        "yesWins": 10781,
+        "noN": 52603,
+        "noSumPnl": 3028.2204425696923,
+        "noSumSqPnl": 15439.34656596864,
+        "noWins": 41822
+      }
+    ],
+    [
+      {
+        "yesN": 696,
+        "yesSumPnl": -261.32863857722157,
+        "yesSumSqPnl": 1036.2174194151007,
+        "yesWins": 157,
+        "noN": 696,
+        "noSumPnl": 139.05207785512607,
+        "noSumSqPnl": 322.0882849525186,
+        "noWins": 539
+      },
+      {
+        "yesN": 982,
+        "yesSumPnl": -97.2806573803342,
+        "yesSumSqPnl": 1695.6454389021694,
+        "yesWins": 317,
+        "noN": 982,
+        "noSumPnl": 38.0672755445436,
+        "noSumSqPnl": 509.53037005383857,
+        "noWins": 665
+      },
+      {
+        "yesN": 1239,
+        "yesSumPnl": -406.13679810521995,
+        "yesSumSqPnl": 1896.415466597054,
+        "yesWins": 301,
+        "noN": 1239,
+        "noSumPnl": 204.85312309769387,
+        "noSumSqPnl": 577.8588043072132,
+        "noWins": 938
+      },
+      {
+        "yesN": 2667,
+        "yesSumPnl": -486.3234236911703,
+        "yesSumSqPnl": 4580.103881373886,
+        "yesWins": 762,
+        "noN": 2667,
+        "noSumPnl": 239.12106557708748,
+        "noSumSqPnl": 1295.681273092714,
+        "noWins": 1905
+      },
+      {
+        "yesN": 6388,
+        "yesSumPnl": -770.0666246599926,
+        "yesSumSqPnl": 11715.078565860405,
+        "yesWins": 1917,
+        "noN": 6388,
+        "noSumPnl": 454.4917269422667,
+        "noSumSqPnl": 3193.285492003134,
+        "noWins": 4471
+      },
+      {
+        "yesN": 15209,
+        "yesSumPnl": -2245.2109657426413,
+        "yesSumSqPnl": 27933.432265761392,
+        "yesWins": 4376,
+        "noN": 15209,
+        "noSumPnl": 1447.7448748317154,
+        "noSumSqPnl": 7559.906165302951,
+        "noWins": 10833
+      },
+      {
+        "yesN": 54461,
+        "yesSumPnl": -8321.774857453463,
+        "yesSumSqPnl": 97688.08053171133,
+        "yesWins": 15826,
+        "noN": 54461,
+        "noSumPnl": 4582.4669392624055,
+        "noSumSqPnl": 26793.355026240508,
+        "noWins": 38635
+      },
+      {
+        "yesN": 32225,
+        "yesSumPnl": -16298.76533309222,
+        "yesSumSqPnl": 46502.9608606346,
+        "yesWins": 5536,
+        "noN": 32225,
+        "noSumPnl": 8423.95680976045,
+        "noSumSqPnl": 12947.793011742198,
+        "noWins": 26689
+      }
+    ],
+    [
+      {
+        "yesN": 1713,
+        "yesSumPnl": -121.08002160173533,
+        "yesSumSqPnl": 1993.6778561044955,
+        "yesWins": 735,
+        "noN": 1713,
+        "noSumPnl": 78.41059727069519,
+        "noSumSqPnl": 1423.031747679193,
+        "noWins": 978
+      },
+      {
+        "yesN": 1709,
+        "yesSumPnl": -300.8558173567447,
+        "yesSumSqPnl": 1957.6452121912919,
+        "yesWins": 649,
+        "noN": 1709,
+        "noSumPnl": 200.90191440112866,
+        "noSumSqPnl": 1340.617810008883,
+        "noWins": 1060
+      },
+      {
+        "yesN": 2791,
+        "yesSumPnl": -688.1588518817662,
+        "yesSumSqPnl": 3159.1005880765115,
+        "yesWins": 970,
+        "noN": 2791,
+        "noSumPnl": 601.0018285544139,
+        "noSumSqPnl": 2343.9820799547015,
+        "noWins": 1821
+      },
+      {
+        "yesN": 3283,
+        "yesSumPnl": 330.0786721450245,
+        "yesSumSqPnl": 4160.974546321771,
+        "yesWins": 1617,
+        "noN": 3283,
+        "noSumPnl": -231.98922815169217,
+        "noSumSqPnl": 2787.7326273678377,
+        "noWins": 1666
+      },
+      {
+        "yesN": 6774,
+        "yesSumPnl": -50.127995790356266,
+        "yesSumSqPnl": 8340.545682215508,
+        "yesWins": 3024,
+        "noN": 6774,
+        "noSumPnl": -0.5323383301589573,
+        "noSumSqPnl": 5497.087364837409,
+        "noWins": 3750
+      },
+      {
+        "yesN": 24184,
+        "yesSumPnl": -4565.527086327197,
+        "yesSumSqPnl": 28493.171209698532,
+        "yesWins": 8866,
+        "noN": 24184,
+        "noSumPnl": 3659.5855251038242,
+        "noSumSqPnl": 19218.25610519669,
+        "noWins": 15318
+      },
+      {
+        "yesN": 47453,
+        "yesSumPnl": -15922.212730111602,
+        "yesSumSqPnl": 55551.21839019928,
+        "yesWins": 14033,
+        "noN": 47453,
+        "noSumPnl": 13776.086349002217,
+        "noSumSqPnl": 37526.44619386846,
+        "noWins": 33420
+      },
+      {
+        "yesN": 34702,
+        "yesSumPnl": -17796.197977920143,
+        "yesSumSqPnl": 37570.307083914355,
+        "yesWins": 7824,
+        "noN": 34702,
+        "noSumPnl": 14296.783035121658,
+        "noSumSqPnl": 26281.88362582887,
+        "noWins": 26878
+      }
+    ],
+    [
+      {
+        "yesN": 7270,
+        "yesSumPnl": 1297.2004500830803,
+        "yesSumSqPnl": 7043.860593928263,
+        "yesWins": 4346,
+        "noN": 7270,
+        "noSumPnl": -1351.5454697106384,
+        "noSumSqPnl": 7425.254698251397,
+        "noWins": 2924
+      },
+      {
+        "yesN": 4020,
+        "yesSumPnl": 929.1734845286924,
+        "yesSumSqPnl": 3755.267014788766,
+        "yesWins": 2549,
+        "noN": 4020,
+        "noSumPnl": -1000.5783223035149,
+        "noSumSqPnl": 4193.012288253298,
+        "noWins": 1471
+      },
+      {
+        "yesN": 6092,
+        "yesSumPnl": 923.4787670653913,
+        "yesSumSqPnl": 5738.305704134667,
+        "yesWins": 3607,
+        "noN": 6092,
+        "noSumPnl": -1029.5497003731411,
+        "noSumSqPnl": 6297.410730233272,
+        "noWins": 2485
+      },
+      {
+        "yesN": 6823,
+        "yesSumPnl": 875.0627202728724,
+        "yesSumSqPnl": 6360.919265087077,
+        "yesWins": 3978,
+        "noN": 6823,
+        "noSumPnl": -922.4272579790332,
+        "noSumSqPnl": 7296.033603910742,
+        "noWins": 2845
+      },
+      {
+        "yesN": 11812,
+        "yesSumPnl": 381.57434225833305,
+        "yesSumSqPnl": 10963.858186431446,
+        "yesWins": 6335,
+        "noN": 11812,
+        "noSumPnl": -518.5474290898412,
+        "noSumSqPnl": 12587.42516400245,
+        "noWins": 5477
+      },
+      {
+        "yesN": 20112,
+        "yesSumPnl": -1371.8564469696757,
+        "yesSumSqPnl": 18358.57916605014,
+        "yesWins": 9866,
+        "noN": 20112,
+        "noSumPnl": 1521.2288627427936,
+        "noSumSqPnl": 22744.641524815732,
+        "noWins": 10246
+      },
+      {
+        "yesN": 43421,
+        "yesSumPnl": 1896.4742862959058,
+        "yesSumSqPnl": 36610.33990827116,
+        "yesWins": 24586,
+        "noN": 43421,
+        "noSumPnl": -3319.034419584366,
+        "noSumSqPnl": 48971.26503593756,
+        "noWins": 18835
+      },
+      {
+        "yesN": 53560,
+        "yesSumPnl": -23553.66337022494,
+        "yesSumSqPnl": 49911.88190135959,
+        "yesWins": 16027,
+        "noN": 53560,
+        "noSumPnl": 27003.810330841796,
+        "noSumSqPnl": 66107.79575990402,
+        "noWins": 37533
+      }
+    ],
+    [
+      {
+        "yesN": 511,
+        "yesSumPnl": 119.05626395869814,
+        "yesSumSqPnl": 233.21743213654423,
+        "yesWins": 405,
+        "noN": 511,
+        "noSumPnl": -214.59949016088115,
+        "noSumSqPnl": 749.9373855918569,
+        "noWins": 106
+      },
+      {
+        "yesN": 1074,
+        "yesSumPnl": 246.34346456845532,
+        "yesSumSqPnl": 459.64060901900126,
+        "yesWins": 862,
+        "noN": 1074,
+        "noSumPnl": -458.1928824112548,
+        "noSumSqPnl": 1641.7210372644547,
+        "noWins": 212
+      },
+      {
+        "yesN": 1261,
+        "yesSumPnl": 103.52532700065987,
+        "yesSumSqPnl": 664.1790353332207,
+        "yesWins": 875,
+        "noN": 1261,
+        "noSumPnl": -206.82779566849175,
+        "noSumSqPnl": 2057.8152051466486,
+        "noWins": 386
+      },
+      {
+        "yesN": 1762,
+        "yesSumPnl": -40.51613388242539,
+        "yesSumSqPnl": 1011.9036642513652,
+        "yesWins": 1102,
+        "noN": 1762,
+        "noSumPnl": 9.067869568949945,
+        "noSumSqPnl": 3013.0606445920566,
+        "noWins": 660
+      },
+      {
+        "yesN": 4225,
+        "yesSumPnl": -23.745619261981325,
+        "yesSumSqPnl": 2305.931013637583,
+        "yesWins": 2727,
+        "noN": 4225,
+        "noSumPnl": 2.8147614718493656,
+        "noSumSqPnl": 7772.9935994554535,
+        "noWins": 1498
+      },
+      {
+        "yesN": 8693,
+        "yesSumPnl": -1052.2403357909047,
+        "yesSumSqPnl": 5327.150908870206,
+        "yesWins": 4910,
+        "noN": 8693,
+        "noSumPnl": 1855.2858132579768,
+        "noSumSqPnl": 17179.67174734564,
+        "noWins": 3783
+      },
+      {
+        "yesN": 28177,
+        "yesSumPnl": 909.3561871950101,
+        "yesSumSqPnl": 15205.015871746577,
+        "yesWins": 18755,
+        "noN": 28177,
+        "noSumPnl": -1264.4466906026555,
+        "noSumSqPnl": 51825.41520583234,
+        "noWins": 9422
+      },
+      {
+        "yesN": 25239,
+        "yesSumPnl": -7702.9906247846075,
+        "yesSumSqPnl": 16833.07577857516,
+        "yesWins": 11557,
+        "noN": 25239,
+        "noSumPnl": 13101.213813493268,
+        "noSumSqPnl": 56660.518914121276,
+        "noWins": 13682
+      }
+    ],
+    [
+      {
+        "yesN": 442,
+        "yesSumPnl": 77.64480795222973,
+        "yesSumSqPnl": 97.92292389699952,
+        "yesWins": 389,
+        "noN": 442,
+        "noSumPnl": -237.65021428400533,
+        "noSumSqPnl": 825.558270778732,
+        "noWins": 53
+      },
+      {
+        "yesN": 715,
+        "yesSumPnl": 134.75464868242523,
+        "yesSumSqPnl": 145.27663778911324,
+        "yesWins": 640,
+        "noN": 715,
+        "noSumPnl": -429.94855917367806,
+        "noSumSqPnl": 1231.959703392243,
+        "noWins": 75
+      },
+      {
+        "yesN": 1112,
+        "yesSumPnl": 141.17807435340302,
+        "yesSumSqPnl": 283.561170594737,
+        "yesWins": 937,
+        "noN": 1112,
+        "noSumPnl": -393.0751434306409,
+        "noSumSqPnl": 2660.928954234753,
+        "noWins": 175
+      },
+      {
+        "yesN": 2031,
+        "yesSumPnl": 237.0546655926842,
+        "yesSumSqPnl": 562.6626322775479,
+        "yesWins": 1679,
+        "noN": 2031,
+        "noSumPnl": -630.4566740016996,
+        "noSumSqPnl": 4879.593099003574,
+        "noWins": 352
+      },
+      {
+        "yesN": 3512,
+        "yesSumPnl": -444.32559637686666,
+        "yesSumSqPnl": 1481.9563196019699,
+        "yesWins": 2296,
+        "noN": 3512,
+        "noSumPnl": 1146.744804868437,
+        "noSumSqPnl": 12269.048800598524,
+        "noWins": 1216
+      },
+      {
+        "yesN": 6809,
+        "yesSumPnl": -637.4086467087959,
+        "yesSumSqPnl": 2675.9006171402357,
+        "yesWins": 4647,
+        "noN": 6809,
+        "noSumPnl": 1755.6730032833068,
+        "noSumSqPnl": 23989.504394009804,
+        "noWins": 2162
+      },
+      {
+        "yesN": 24655,
+        "yesSumPnl": 306.6436780567945,
+        "yesSumSqPnl": 8225.642124454796,
+        "yesWins": 18628,
+        "noN": 24655,
+        "noSumPnl": 270.3638193682609,
+        "noSumSqPnl": 79117.72592069034,
+        "noWins": 6027
+      },
+      {
+        "yesN": 21419,
+        "yesSumPnl": -9358.969249317388,
+        "yesSumSqPnl": 13599.343585222268,
+        "yesWins": 8936,
+        "noN": 21419,
+        "noSumPnl": 28617.348466491483,
+        "noSumSqPnl": 123963.95701719598,
+        "noWins": 12483
+      }
+    ],
+    [
+      {
+        "yesN": 388,
+        "yesSumPnl": 33.086692188236725,
+        "yesSumSqPnl": 41.842581933896376,
+        "yesWins": 358,
+        "noN": 388,
+        "noSumPnl": -193.96084674310484,
+        "noSumSqPnl": 1277.684155305618,
+        "noWins": 30
+      },
+      {
+        "yesN": 796,
+        "yesSumPnl": 46.077387011868566,
+        "yesSumSqPnl": 111.9532954385648,
+        "yesWins": 710,
+        "noN": 796,
+        "noSumPnl": -151.45868154790406,
+        "noSumSqPnl": 4349.966299325959,
+        "noWins": 86
+      },
+      {
+        "yesN": 1131,
+        "yesSumPnl": -1.1925258312270737,
+        "yesSumSqPnl": 198.61714658671946,
+        "yesWins": 963,
+        "noN": 1131,
+        "noSumPnl": 104.68460814631592,
+        "noSumSqPnl": 7951.136763074692,
+        "noWins": 168
+      },
+      {
+        "yesN": 1773,
+        "yesSumPnl": 94.45596612460906,
+        "yesSumSqPnl": 260.7354327825416,
+        "yesWins": 1571,
+        "noN": 1773,
+        "noSumPnl": -538.3926246611979,
+        "noSumSqPnl": 7174.3989198622885,
+        "noWins": 202
+      },
+      {
+        "yesN": 4569,
+        "yesSumPnl": 309.5862848488433,
+        "yesSumSqPnl": 581.9714914294449,
+        "yesWins": 4130,
+        "noN": 4569,
+        "noSumPnl": -1791.8811279595143,
+        "noSumSqPnl": 17325.360652818694,
+        "noWins": 439
+      },
+      {
+        "yesN": 9358,
+        "yesSumPnl": 320.6849825848643,
+        "yesSumSqPnl": 1403.637701148143,
+        "yesWins": 8224,
+        "noN": 9358,
+        "noSumPnl": -1223.3034223334264,
+        "noSumSqPnl": 53208.55501118256,
+        "noWins": 1134
+      },
+      {
+        "yesN": 31773,
+        "yesSumPnl": -7301.261097844399,
+        "yesSumSqPnl": 11694.294361014558,
+        "yesWins": 20770,
+        "noN": 31773,
+        "noSumPnl": 50663.36552476196,
+        "noSumSqPnl": 501897.73601428815,
+        "noWins": 11003
+      },
+      {
+        "yesN": 12208,
+        "yesSumPnl": -769.9593313055296,
+        "yesSumSqPnl": 2818.6159020999394,
+        "yesWins": 9710,
+        "noN": 12208,
+        "noSumPnl": 2149.9622263142537,
+        "noSumSqPnl": 66883.87383393844,
+        "noWins": 2498
+      }
+    ],
+    [
+      {
+        "yesN": 307,
+        "yesSumPnl": 3.040984169298981,
+        "yesSumSqPnl": 21.93513057104318,
+        "yesWins": 287,
+        "noN": 307,
+        "noSumPnl": -106.4736842105263,
+        "noSumSqPnl": 1916.7506925207758,
+        "noWins": 20
+      },
+      {
+        "yesN": 517,
+        "yesSumPnl": 42.70618165493097,
+        "yesSumSqPnl": 3.7094124834005577,
+        "yesWins": 517,
+        "noN": 517,
+        "noSumPnl": -517,
+        "noSumSqPnl": 517,
+        "noWins": 0
+      },
+      {
+        "yesN": 1069,
+        "yesSumPnl": 82.61788507988317,
+        "yesSumSqPnl": 6.693874418825885,
+        "yesWins": 1069,
+        "noN": 1069,
+        "noSumPnl": -1069,
+        "noSumSqPnl": 1069,
+        "noWins": 0
+      },
+      {
+        "yesN": 1981,
+        "yesSumPnl": 143.75285363483545,
+        "yesSumSqPnl": 16.658815447626772,
+        "yesWins": 1976,
+        "noN": 1981,
+        "noSumPnl": -1886.097585004127,
+        "noSumSqPnl": 3592.9736450595515,
+        "noWins": 5
+      },
+      {
+        "yesN": 3838,
+        "yesSumPnl": 165.85504986535983,
+        "yesSumSqPnl": 166.52966707587206,
+        "yesWins": 3698,
+        "noN": 3838,
+        "noSumPnl": -1910.7408764083116,
+        "noSumSqPnl": 27496.766665822142,
+        "noWins": 140
+      },
+      {
+        "yesN": 6344,
+        "yesSumPnl": 145.92894247426662,
+        "yesSumSqPnl": 374.357448715711,
+        "yesWins": 6010,
+        "noN": 6344,
+        "noSumPnl": -1734.8080842446225,
+        "noSumSqPnl": 62206.19765160889,
+        "noWins": 334
+      },
+      {
+        "yesN": 37330,
+        "yesSumPnl": 633.3503541815568,
+        "yesSumSqPnl": 2500.249275947521,
+        "yesWins": 35075,
+        "noN": 37330,
+        "noSumPnl": -12082.133124343824,
+        "noSumSqPnl": 274351.91530693934,
+        "noWins": 2255
+      },
+      {
+        "yesN": 14943,
+        "yesSumPnl": 1368.8537456449633,
+        "yesSumSqPnl": 141.4351353630585,
+        "yesWins": 14932,
+        "noN": 14943,
+        "noSumPnl": -14803.833333333336,
+        "noSumSqPnl": 16532.027777777774,
+        "noWins": 11
+      }
+    ],
+    [
+      {
+        "yesN": 1046,
+        "yesSumPnl": 15.106163009991768,
+        "yesSumSqPnl": 0.46974624846443563,
+        "yesWins": 1046,
+        "noN": 1046,
+        "noSumPnl": -1046,
+        "noSumSqPnl": 1046,
+        "noWins": 0
+      },
+      {
+        "yesN": 2149,
+        "yesSumPnl": -7.766515676343896,
+        "yesSumSqPnl": 41.94833552594617,
+        "yesWins": 2108,
+        "noN": 2149,
+        "noSumPnl": 2740.940247231296,
+        "noSumSqPnl": 742073.8803488143,
+        "noWins": 41
+      },
+      {
+        "yesN": 4338,
+        "yesSumPnl": -17.846904282339324,
+        "yesSumSqPnl": 98.22772079954981,
+        "yesWins": 4242,
+        "noN": 4338,
+        "noSumPnl": 2521.9152770471496,
+        "noSumSqPnl": 498534.06176926004,
+        "noWins": 96
+      },
+      {
+        "yesN": 6250,
+        "yesSumPnl": -29.288254729373364,
+        "yesSumSqPnl": 161.81990340466808,
+        "yesWins": 6092,
+        "noN": 6250,
+        "noSumPnl": -2114.1328201476476,
+        "noSumSqPnl": 107910.56925178124,
+        "noWins": 158
+      },
+      {
+        "yesN": 10744,
+        "yesSumPnl": 241.77675035840514,
+        "yesSumSqPnl": 14.287153523443461,
+        "yesWins": 10737,
+        "noN": 10744,
+        "noSumPnl": -10509.310061160899,
+        "noSumSqPnl": 23311.509537096965,
+        "noWins": 7
+      },
+      {
+        "yesN": 18347,
+        "yesSumPnl": 502.14702214620087,
+        "yesSumSqPnl": 20.91936150471942,
+        "yesWins": 18343,
+        "noN": 18347,
+        "noSumPnl": -18262.555555555555,
+        "noSumSqPnl": 19965.765432098764,
+        "noWins": 4
+      },
+      {
+        "yesN": 30126,
+        "yesSumPnl": 1033.8773989141332,
+        "yesSumSqPnl": 42.03188551362064,
+        "yesWins": 30126,
+        "noN": 30126,
+        "noSumPnl": -30126,
+        "noSumSqPnl": 30126,
+        "noWins": 0
+      },
+      {
+        "yesN": 3117,
+        "yesSumPnl": -91.3661756019884,
+        "yesSumSqPnl": 190.5891908165897,
+        "yesWins": 2930,
+        "noN": 3117,
+        "noSumPnl": 5007.999999999996,
+        "noSumSqPnl": 381991.9999999999,
+        "noWins": 187
+      }
+    ]
+  ],
+  "generatedAt": "2026-05-10T01:15:02.205Z",
+  "totalCandlesProcessed": 3344538
+}

@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { HighProbabilityBondParams, StrategyConfig, StoredStrategyConfig, StrategyTemplateId } from "@/types"
+import type { FadeFavoriteParams, HighProbabilityBondParams, StrategyConfig, StoredStrategyConfig, StrategyTemplateId } from "@/types"
 import { STRATEGY_TEMPLATES } from "@/lib/strategy-templates"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -338,6 +338,87 @@ export function ClassicBacktestFormFields({ params, onChange }: { params: Strate
   )
 }
 
+export function FadeFavoriteFormFields({ params, onChange }: { params: FadeFavoriteParams; onChange: (p: FadeFavoriteParams) => void }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">Entry — leader band</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Leader min price</Label>
+            <Input type="number" min={0} max={1} step={0.01} value={params.leaderMinPrice}
+              onChange={(e) => onChange({ ...params, leaderMinPrice: num(e.target.value) ?? 0 })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Leader max price</Label>
+            <Input type="number" min={0} max={1} step={0.01} value={params.leaderMaxPrice}
+              onChange={(e) => onChange({ ...params, leaderMaxPrice: num(e.target.value) ?? 1 })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Min TTR (days)</Label>
+            <Input type="number" min={1} step={1} value={params.minTtrDays}
+              onChange={(e) => onChange({ ...params, minTtrDays: Math.round(num(e.target.value) ?? 1) })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Max TTR (days, empty = no cap)</Label>
+            <Input type="number" min={1} step={1} value={params.maxTtrDays == null ? "" : params.maxTtrDays}
+              onChange={(e) => {
+                const raw = e.target.value
+                onChange({ ...params, maxTtrDays: raw === "" ? null : Math.round(num(raw) ?? 0) })
+              }} />
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">Liquidity floors</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Min liquidity</Label>
+            <Input type="number" min={0} step={100} value={params.minLiquidityNum}
+              onChange={(e) => onChange({ ...params, minLiquidityNum: num(e.target.value) ?? 0 })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Min volume</Label>
+            <Input type="number" min={0} step={1000} value={params.minVolumeNum}
+              onChange={(e) => onChange({ ...params, minVolumeNum: num(e.target.value) ?? 0 })} />
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">Exit & sizing</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Max holding days</Label>
+            <Input type="number" min={1} step={1} value={params.maxHoldingDays == null ? "" : params.maxHoldingDays}
+              onChange={(e) => {
+                const raw = e.target.value
+                onChange({ ...params, maxHoldingDays: raw === "" ? null : Math.round(num(raw) ?? 0) })
+              }} />
+          </div>
+          <div className="space-y-2">
+            <Label>Slippage per leg (0–0.5)</Label>
+            <Input type="number" min={0} max={0.5} step={0.01} value={params.slippagePerLegPct == null ? "" : params.slippagePerLegPct}
+              onChange={(e) => {
+                const raw = e.target.value
+                onChange({ ...params, slippagePerLegPct: raw === "" ? null : (num(raw) ?? null) })
+              }} />
+          </div>
+          <div className="space-y-2">
+            <Label>Position size %</Label>
+            <Input type="number" min={0.1} max={100} step={0.1} value={params.positionSizePct}
+              onChange={(e) => onChange({ ...params, positionSizePct: num(e.target.value) ?? 1 })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Max open positions</Label>
+            <Input type="number" min={1} max={200} step={1} value={params.maxOpenPositions}
+              onChange={(e) => onChange({ ...params, maxOpenPositions: Math.round(num(e.target.value) ?? 1) })} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function TemplateParamsForm({
   stored,
   onChange,
@@ -345,6 +426,44 @@ export function TemplateParamsForm({
   stored: StoredStrategyConfig
   onChange: (next: StoredStrategyConfig) => void
 }) {
+  if (stored.templateId === "resolution_sniper") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Resolution Sniper parameters</CardTitle>
+          <CardDescription>
+            Evidence-based defaults from 2024 calibration: 90%+ markets resolved correctly 100% of the time across 44 markets.
+            The 97% cap avoids the final-hours noise zone where price movement is no longer informative.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <HighProbabilityBondFormFields
+            params={stored.params}
+            onChange={(p) => onChange({ templateId: "resolution_sniper", version: 1, params: p })}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
+  if (stored.templateId === "fade_favorite") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Fade-the-Favorite parameters</CardTitle>
+          <CardDescription>
+            Bet NO when YES sits in the leader band with long TTR. Calibrated 2026-05 from 3.35M Polymarket candles —
+            Polymarket overpays for far-future certainty; these markets resolve NO ~80% of the time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FadeFavoriteFormFields
+            params={stored.params}
+            onChange={(p) => onChange({ templateId: "fade_favorite", version: 1, params: p })}
+          />
+        </CardContent>
+      </Card>
+    )
+  }
   if (stored.templateId === "high_probability_bond") {
     return (
       <Card>

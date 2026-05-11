@@ -3,7 +3,7 @@ import { getSessionFromRequest, canAccessPlatform } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { parseStoredStrategyConfig } from "@/lib/strategy-templates"
 import { fetchAllMarkets } from "@/lib/gamma/fetch-markets"
-import { filterMarketsByBondParams } from "@/lib/gamma/watchlist-filter"
+import { filterMarketsByBondParams, filterMarketsByFadeParams } from "@/lib/gamma/watchlist-filter"
 import { z } from "zod"
 
 const bodySchema = z.object({
@@ -38,11 +38,15 @@ export async function POST(req: NextRequest) {
     if (!parsed.ok) {
       return NextResponse.json({ error: "Invalid strategy configuration" }, { status: 400 })
     }
-    if (parsed.data.templateId !== "high_probability_bond") {
+    if (
+      parsed.data.templateId !== "high_probability_bond" &&
+      parsed.data.templateId !== "resolution_sniper" &&
+      parsed.data.templateId !== "fade_favorite"
+    ) {
       return NextResponse.json(
         {
           error:
-            "Live apply is only available for High-probability bond strategies. Create one under Strategies or pick a different strategy.",
+            "Live apply is only available for High-probability bond, Resolution Sniper, or Fade-the-Favorite strategies.",
         },
         { status: 400 }
       )
@@ -60,7 +64,36 @@ export async function POST(req: NextRequest) {
     })
 
     const generatedAt = new Date().toISOString()
-    const entries = filterMarketsByBondParams(markets, parsed.data.params, new Date())
+    const entries = parsed.data.templateId === "fade_favorite"
+      ? filterMarketsByFadeParams(markets, parsed.data.params, new Date())
+      : filterMarketsByBondParams(markets, parsed.data.params, new Date())
+
+    try {
+      await prisma.liveApplyRun.create({
+        data: {
+          userId: session.id,
+          strategyId: strategy.id,
+          paramsJson: JSON.stringify(parsed.data.params),
+          marketsScanned: markets.length,
+          matchCount: entries.length,
+          matchesJson: JSON.stringify(
+            entries.map((e) => ({
+              slug: e.slug,
+              question: e.question,
+              maxPrice: e.maxPrice,
+              leadingOutcome: e.leadingOutcome,
+              edgeToPar: e.edgeToPar,
+              liquidityNum: e.liquidityNum,
+              volumeNum: e.volumeNum,
+              endDate: e.endDate,
+              urlPath: e.urlPath,
+            }))
+          ),
+        },
+      })
+    } catch (persistErr) {
+      console.error("Failed to persist live apply run:", persistErr)
+    }
 
     return NextResponse.json({
       generatedAt,

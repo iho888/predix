@@ -23,6 +23,12 @@ interface Strategy {
 
 type MetricsWithRun = SimulationMetrics & { runKind?: "closed_batch" | "historical" }
 
+type StoredStats = {
+  totalMarkets: number
+  earliestEndDate: string | null
+  latestEndDate: string | null
+}
+
 interface Simulation {
   id: string
   name: string
@@ -35,7 +41,10 @@ interface Simulation {
 }
 
 function isBondPolymarketStrategy(s: Strategy): boolean {
-  return s.platform === "polymarket" && s.config?.templateId === "high_probability_bond"
+  return (
+    s.platform === "polymarket" &&
+    (s.config?.templateId === "high_probability_bond" || s.config?.templateId === "resolution_sniper")
+  )
 }
 
 function localInputValue(d: Date): string {
@@ -46,6 +55,7 @@ function localInputValue(d: Date): string {
 export default function SimulationsPage() {
   const [simulations, setSimulations] = useState<Simulation[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
+  const [dataStats, setDataStats] = useState<StoredStats | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [runTab, setRunTab] = useState<"batch" | "historical" | "db">("db")
   const [loading, setLoading] = useState(false)
@@ -74,9 +84,26 @@ export default function SimulationsPage() {
   const eligibleStrategies = strategies.filter(isBondPolymarketStrategy)
 
   async function fetchData() {
-    const [simsRes, stratsRes] = await Promise.all([fetch("/api/simulations"), fetch("/api/strategies")])
+    const [simsRes, stratsRes, statsRes] = await Promise.all([
+      fetch("/api/simulations"),
+      fetch("/api/strategies"),
+      fetch("/api/markets/stored", { cache: "no-store" }),
+    ])
     if (simsRes.ok) setSimulations(await simsRes.json())
     if (stratsRes.ok) setStrategies(await stratsRes.json())
+    if (statsRes.ok) {
+      const stats: StoredStats = await statsRes.json()
+      setDataStats(stats)
+      // Auto-set simulation dates to match available DB data range
+      if (stats.latestEndDate) {
+        const end = new Date(stats.latestEndDate)
+        end.setMinutes(0, 0, 0)
+        const start = new Date(end)
+        start.setMonth(start.getMonth() - 6)
+        start.setHours(0, 0, 0, 0)
+        setForm((prev) => ({ ...prev, histEnd: localInputValue(end), histStart: localInputValue(start) }))
+      }
+    }
   }
 
   useEffect(() => {
@@ -212,7 +239,8 @@ export default function SimulationsPage() {
       {eligibleStrategies.length === 0 && (
         <div className="p-4 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
           You need a saved <strong className="font-medium">Polymarket</strong> strategy using the{" "}
-          <strong className="font-medium">High-probability bond</strong> template.{" "}
+          <strong className="font-medium">High-probability bond</strong> or{" "}
+          <strong className="font-medium">Resolution Sniper</strong> template.{" "}
           <Link href="/dashboard/strategies" className="underline">
             Create or edit a strategy
           </Link>
@@ -408,6 +436,15 @@ export default function SimulationsPage() {
                     Runs against your <strong className="font-medium">stored Polymarket database</strong> (no API calls during the run).
                     Large date ranges may take ~10–30s.
                   </p>
+                  {dataStats?.earliestEndDate && dataStats?.latestEndDate && (
+                    <p className="text-xs text-sky-300/70">
+                      DB data available:{" "}
+                      <strong className="font-medium">{new Date(dataStats.earliestEndDate).toLocaleDateString()}</strong>
+                      {" → "}
+                      <strong className="font-medium">{new Date(dataStats.latestEndDate).toLocaleDateString()}</strong>
+                      {" "}— dates outside this range will return 0 trades.
+                    </p>
+                  )}
                 </div>
                 <form onSubmit={handleRunDbReplay} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

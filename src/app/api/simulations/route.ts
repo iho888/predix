@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-export const maxDuration = 60
+export const maxDuration = 300
 import { getSessionFromRequest, canAccessPlatform } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { runSimulation } from "@/lib/simulation/engine"

@@ -39,8 +39,13 @@ function inferWinningOutcomeIndexFromPrices(prices: unknown[]): 0 | 1 | null {
   const p0 = Number(prices[0])
   const p1 = Number(prices[1])
   if (!Number.isFinite(p0) || !Number.isFinite(p1)) return null
+  // Strict threshold first
   if (p0 >= 0.99) return 0
   if (p1 >= 0.99) return 1
+  // For closed markets where neither price hit 0.99 (e.g. settled at 0.95–0.98),
+  // pick the higher price as the winner rather than leaving it null.
+  if (p0 > p1) return 0
+  if (p1 > p0) return 1
   return null
 }
 

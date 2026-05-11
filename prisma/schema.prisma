@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "cockroachdb"
   url      = env("DATABASE_URL")
 }
 
@@ -18,8 +18,10 @@ model User {
   stripeCustomerId   String?
   stripeSubscriptionId String?
 
-  strategies   Strategy[]
-  simulations  Simulation[]
+  strategies     Strategy[]
+  simulations    Simulation[]
+  liveApplyRuns  LiveApplyRun[]
+  paperPositions PaperPosition[]
 }
 
 model Strategy {
@@ -33,8 +35,10 @@ model Strategy {
   updatedAt   DateTime @updatedAt
   isActive    Boolean  @default(true)
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  simulations Simulation[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  simulations    Simulation[]
+  liveApplyRuns  LiveApplyRun[]
+  paperPositions PaperPosition[]
 }
 
 model Simulation {
@@ -56,6 +60,64 @@ model Simulation {
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   strategy    Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+}
+
+model LiveApplyRun {
+  id             String   @id @default(cuid())
+  userId         String
+  strategyId     String
+  paramsJson     String
+  marketsScanned Int
+  matchCount     Int
+  matchesJson    String
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategy       Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([strategyId])
+}
+
+/// Paper-traded positions for a strategy. Live cron enters new positions when
+/// a market matches the strategy's filter; closes them at maxHoldingDays via
+/// a separate exit cron. Used to validate sim-live ≡ dryrun parity (T-0002)
+/// before any real money. Does not place real Polymarket orders — that's T-0014.
+model PaperPosition {
+  id              String   @id @default(cuid())
+  userId          String
+  strategyId      String
+
+  marketSlug      String
+  marketQuestion  String
+  side            String   // "YES" | "NO"
+  tokenId         String   // CLOB token id we'd buy
+  endDate         DateTime // Market resolution date
+
+  entryTime       DateTime
+  entryMid        Float    // Mid YES price at entry (we pay 1-yesMid for NO)
+  entryFillPrice  Float    // Slippage-adjusted price actually "paid"
+  positionSizeUsd Float
+  shares          Float    // sizeUsd / entryFillPrice
+
+  status          String   @default("OPEN") // "OPEN" | "CLOSED" | "RESOLVED"
+  exitTime        DateTime?
+  exitMid         Float?
+  exitFillPrice   Float?
+  exitReason      String?  // "max_holding" | "resolution" | "tp" | "sl" | "manual"
+  pnlUsd          Float?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategy        Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  // One open position per strategy per market (prevents the cron re-entering
+  // a market that already has an open paper position).
+  @@unique([strategyId, marketSlug, status])
+  @@index([userId, status])
+  @@index([status, entryTime])
 }
 
 model PolymarketMarket {
@@ -90,15 +152,13 @@ model PolymarketMarket {
 }
 
 model PolymarketPriceCandle {
-  id         String   @id @default(cuid())
   marketSlug String
   timestamp  DateTime
   yesPrice   Float
 
   market     PolymarketMarket @relation(fields: [marketSlug], references: [slug], onDelete: Cascade)
 
-  @@unique([marketSlug, timestamp])
-  @@index([marketSlug, timestamp])
+  @@id([marketSlug, timestamp])
 }
 
 model DataSyncLog {

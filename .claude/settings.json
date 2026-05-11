@@ -1,0 +1,41 @@
+{
+  "model": "claude-opus-4-7",
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "WebFetch(*)",
+      "WebSearch(*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env*.local)",
+      "Read(./db_pwd.txt)",
+      "Read(./secrets/**)",
+      "Read(./*.pem)",
+      "Read(./*.key)",
+      "Read(./.claude/settings.local.json)",
+      "Bash(cat .env*)",
+      "Bash(cat ./.env*)",
+      "Bash(cat db_pwd.txt)",
+      "Bash(cat ./db_pwd.txt)",
+      "Bash(type .env*)",
+      "Bash(type db_pwd.txt)",
+      "Bash(Get-Content .env*)",
+      "Bash(Get-Content db_pwd.txt)",
+      "Bash(git add .env*)",
+      "Bash(git add ./.env*)",
+      "Bash(git add db_pwd.txt)",
+      "Bash(git add ./db_pwd.txt)",
+      "Bash(git add secrets/*)",
+      "Bash(git add -A*)",
+      "Bash(git add .*)",
+      "Bash(git add --all*)"
+    ]
+  }
+}

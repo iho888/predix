@@ -23,9 +23,10 @@ function pickTokenIdForSide(clobTokenIdsJson: unknown, side: "YES" | "NO"): stri
   return s ? s : null
 }
 
-function exitPriceForSide(side: "YES" | "NO", winningOutcomeIndex: 0 | 1): number {
-  if (side === "YES") return winningOutcomeIndex === 0 ? 1 : 0
-  return winningOutcomeIndex === 1 ? 1 : 0
+function exitPriceForSide(side: "YES" | "NO", winningOutcomeIndex: number | string): number {
+  const idx = Number(winningOutcomeIndex)
+  if (side === "YES") return idx === 0 ? 1 : 0
+  return idx === 1 ? 1 : 0
 }
 
 type OpenPos = {
@@ -38,7 +39,7 @@ type OpenPos = {
   tokenId: string
   marketQuestion: string
   endDate: Date
-  winningOutcomeIndex: 0 | 1
+  winningOutcomeIndex: number | string
 }
 
 function buildMetrics(
@@ -228,26 +229,31 @@ export async function runPolymarketDbSimulation(options: {
 
   let skippedNoHistory = 0
 
-  const positionSizePct =
-    options.strategyConfig.templateId === "high_probability_bond"
-      ? options.strategyConfig.params.positionSizePct
-      : options.strategyConfig.params.positionSizePct
-  const maxOpenPositions =
-    options.strategyConfig.templateId === "high_probability_bond"
-      ? options.strategyConfig.params.maxOpenPositions
-      : options.strategyConfig.params.maxOpenPositions
-  const takeProfitPct =
-    options.strategyConfig.templateId === "high_probability_bond"
-      ? options.strategyConfig.params.takeProfitPct
-      : options.strategyConfig.params.exitConditions.takeProfitPct
-  const stopLossPct =
-    options.strategyConfig.templateId === "high_probability_bond"
-      ? options.strategyConfig.params.stopLossPct
-      : options.strategyConfig.params.exitConditions.stopLossPct
-  const maxHoldingDays =
-    options.strategyConfig.templateId === "high_probability_bond"
-      ? options.strategyConfig.params.maxHoldingDays
-      : options.strategyConfig.params.exitConditions.maxHoldingDays
+  const positionSizePct = options.strategyConfig.params.positionSizePct
+  const maxOpenPositions = options.strategyConfig.params.maxOpenPositions
+  // null/undefined → exit rule disabled. The fade_favorite template runs
+  // without TP/SL by default (calibration showed wider rules outperform).
+  let takeProfitPct: number | null
+  let stopLossPct: number | null
+  let maxHoldingDays: number | null | undefined
+  let slippagePerLegPct = 0
+  if (
+    options.strategyConfig.templateId === "high_probability_bond" ||
+    options.strategyConfig.templateId === "resolution_sniper"
+  ) {
+    takeProfitPct = options.strategyConfig.params.takeProfitPct
+    stopLossPct = options.strategyConfig.params.stopLossPct
+    maxHoldingDays = options.strategyConfig.params.maxHoldingDays
+  } else if (options.strategyConfig.templateId === "fade_favorite") {
+    takeProfitPct = options.strategyConfig.params.takeProfitPct
+    stopLossPct = options.strategyConfig.params.stopLossPct
+    maxHoldingDays = options.strategyConfig.params.maxHoldingDays
+    slippagePerLegPct = options.strategyConfig.params.slippagePerLegPct ?? 0
+  } else {
+    takeProfitPct = options.strategyConfig.params.exitConditions.takeProfitPct
+    stopLossPct = options.strategyConfig.params.exitConditions.stopLossPct
+    maxHoldingDays = options.strategyConfig.params.exitConditions.maxHoldingDays
+  }
 
   for (const timeKey of times) {
     const currentTime = new Date(timeKey)
@@ -269,21 +275,24 @@ export async function runPolymarketDbSimulation(options: {
       if (currentTime.getTime() >= m.endDate.getTime()) {
         shouldExit = true
         exitReason = "resolution"
-        exitPrice = exitPriceForSide(pos.side, m.winningOutcomeIndex as 0 | 1)
+        exitPrice = exitPriceForSide(pos.side, m.winningOutcomeIndex)
       } else if (currentPrice != null) {
         const pnlPct = (currentPrice - pos.entryPrice) / pos.entryPrice
-        if (pnlPct >= takeProfitPct) {
+        // Slippage applies on exit fills (TP/SL/maxhold) — receive below mid.
+        // Resolution exits settle on-chain at 0 or 1 deterministically; no slip.
+        const exitFill = currentPrice * (1 - slippagePerLegPct)
+        if (takeProfitPct != null && pnlPct >= takeProfitPct) {
           shouldExit = true
           exitReason = "take_profit"
-          exitPrice = currentPrice
-        } else if (pnlPct <= -stopLossPct) {
+          exitPrice = exitFill
+        } else if (stopLossPct != null && pnlPct <= -stopLossPct) {
           shouldExit = true
           exitReason = "stop_loss"
-          exitPrice = currentPrice
+          exitPrice = exitFill
         } else if (maxHoldingDays != null && differenceInDays(currentTime, pos.entryTime) >= maxHoldingDays) {
           shouldExit = true
           exitReason = "max_holding"
-          exitPrice = currentPrice
+          exitPrice = exitFill
         }
       }
 
@@ -338,7 +347,9 @@ export async function runPolymarketDbSimulation(options: {
         const positionSizeUsd = Math.round(Math.max(5, (cash * positionSizePct) / 100) * 100) / 100
         if (positionSizeUsd > cash) continue
 
-        const entryPrice = dec.side === "YES" ? candle.yesPrice : 1 - candle.yesPrice
+        const entryMid = dec.side === "YES" ? candle.yesPrice : 1 - candle.yesPrice
+        // Slippage: pay above mid on entry. Bounded to (0, 1].
+        const entryPrice = Math.min(0.999, Math.max(0.001, entryMid * (1 + slippagePerLegPct)))
         const tokenId = pickTokenIdForSide(m.clobTokenIdsJson, dec.side)
         if (!tokenId) continue
 
@@ -352,14 +363,42 @@ export async function runPolymarketDbSimulation(options: {
           tokenId,
           marketQuestion: m.question,
           endDate: m.endDate,
-          winningOutcomeIndex: m.winningOutcomeIndex as 0 | 1,
+          winningOutcomeIndex: m.winningOutcomeIndex,
         })
         cash -= positionSizeUsd
       }
     }
   }
 
-  // For DB replay we only persist CLOSED trades; any unclosed is ignored.
+  // Force-resolve any positions still open — candles stop before market endDate,
+  // so the in-loop resolution check never fires. Use winningOutcomeIndex from DB.
+  for (const [slug, pos] of open) {
+    const m = marketBySlug.get(slug)
+    if (!m) continue
+    const exitPrice = exitPriceForSide(pos.side, m.winningOutcomeIndex as 0 | 1)
+    const pnl = Math.round(pos.shares * (exitPrice - pos.entryPrice) * 100) / 100
+    cash += pos.sizeUsd + pnl
+    equitySteps.push({ t: Math.floor(m.endDate.getTime() / 1000), equity: Math.round(cash * 100) / 100 })
+    executed.push({
+      source: "polymarket",
+      id: randomSimId(),
+      slug,
+      question: pos.marketQuestion,
+      tokenId: pos.tokenId,
+      side: pos.side,
+      entryPrice: Math.round(pos.entryPrice * 1e6) / 1e6,
+      exitPrice: Math.round(exitPrice * 1e6) / 1e6,
+      positionSizeUsd: Math.round(pos.sizeUsd * 100) / 100,
+      pnl,
+      won: pnl > 0,
+      entryRule: "clob_first_candle_after_start",
+      historyFirstT: Math.floor(pos.entryTime.getTime() / 1000),
+      historyExitT: Math.floor(m.endDate.getTime() / 1000),
+      exitReason: "resolution",
+      polymarketRun: "historical",
+    })
+  }
+
   const batch = {
     totalSlugsFetched: slugs.length,
     matchedMarkets: slugs.length,

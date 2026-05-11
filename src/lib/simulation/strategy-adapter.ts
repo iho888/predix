@@ -1,4 +1,4 @@
-import type { StoredStrategyConfig, HighProbabilityBondParams, StrategyConfig } from "@/types"
+import type { StoredStrategyConfig, HighProbabilityBondParams, FadeFavoriteParams, StrategyConfig } from "@/types"
 import { addDays } from "date-fns"
 
 export type DbCandle = {
@@ -62,14 +62,38 @@ function classicEntry(candle: DbCandle, market: DbMarket, params: StrategyConfig
   return { ok: true, side, entryRule: "clob_first_candle_after_start" }
 }
 
+function fadeFavoriteEntry(candle: DbCandle, market: DbMarket, params: FadeFavoriteParams, now: Date): EntryDecision {
+  const yes = candle.yesPrice
+  if (!Number.isFinite(yes) || yes <= 0 || yes >= 1) return { ok: false }
+  // Asymmetric edge per scripts/calibrate.cjs (2026-05-10): only fade when YES
+  // is the leader. The mirror trade (YES bet when NO leads) was a losing bucket.
+  if (yes < params.leaderMinPrice || yes > params.leaderMaxPrice) return { ok: false }
+
+  if (market.liquidityNum != null && market.liquidityNum < params.minLiquidityNum) return { ok: false }
+  if (market.volumeNum != null && market.volumeNum < params.minVolumeNum) return { ok: false }
+
+  // TTR window
+  const ttrMs = market.endDate.getTime() - now.getTime()
+  if (ttrMs <= 0) return { ok: false }
+  const ttrDays = ttrMs / 86400000
+  if (ttrDays < params.minTtrDays) return { ok: false }
+  if (params.maxTtrDays != null && ttrDays > params.maxTtrDays) return { ok: false }
+
+  // Always bet NO — fade the YES leader.
+  return { ok: true, side: "NO", entryRule: "clob_first_candle_after_start" }
+}
+
 export function strategyPassesEntry(
   candle: DbCandle,
   market: DbMarket,
   config: StoredStrategyConfig,
   currentTime: Date
 ): EntryDecision {
-  if (config.templateId === "high_probability_bond") {
+  if (config.templateId === "high_probability_bond" || config.templateId === "resolution_sniper") {
     return bondEntry(candle, market, config.params, currentTime)
+  }
+  if (config.templateId === "fade_favorite") {
+    return fadeFavoriteEntry(candle, market, config.params, currentTime)
   }
   return classicEntry(candle, market, config.params, currentTime)
 }

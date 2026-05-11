@@ -28,7 +28,11 @@ export interface StrategyConfig {
   endWithinDays?: number | null
 }
 
-export type StrategyTemplateId = "high_probability_bond" | "classic_backtest"
+export type StrategyTemplateId =
+  | "high_probability_bond"
+  | "classic_backtest"
+  | "resolution_sniper"
+  | "fade_favorite"
 
 export interface HighProbabilityBondParams {
   minPrice: number
@@ -46,8 +50,36 @@ export interface HighProbabilityBondParams {
 /** @deprecated use HighProbabilityBondParams (legacy name) */
 export type PolyWatchBondParams = HighProbabilityBondParams
 
+/** Fade-the-Favorite params. Bet AGAINST the YES side when YES sits in the
+ *  leader band with long TTR. Empirical edge derived from scripts/calibrate.cjs
+ *  and scripts/calibrate-exits.cjs (3.35M Polymarket candles, 2022-2026). */
+export interface FadeFavoriteParams {
+  /** Lower bound on YES price for entry (we fade by betting NO). */
+  leaderMinPrice: number
+  /** Upper bound on YES price for entry. Above this, the market is too
+   *  certain to fade — calibration showed reverse edge in [0.85, 1.0]. */
+  leaderMaxPrice: number
+  /** Minimum days to resolution at entry. Long TTR is where mispricing lives. */
+  minTtrDays: number
+  /** Optional cap on TTR. Past 365d the edge starts to dilute. */
+  maxTtrDays: number | null
+  minLiquidityNum: number
+  minVolumeNum: number
+  takeProfitPct: number | null
+  stopLossPct: number | null
+  /** Hold N days then exit at last-known price. 14d is the calibrated optimum. */
+  maxHoldingDays: number | null
+  /** Per-leg slippage haircut applied at entry (price × 1+slip) and exit
+   *  (price × 1-slip). Probe-derived: ~6% on $50 orders in vol≥25k markets. */
+  slippagePerLegPct: number | null
+  positionSizePct: number
+  maxOpenPositions: number
+}
+
 export type StoredStrategyConfig =
   | { templateId: "high_probability_bond"; version?: 1; params: HighProbabilityBondParams }
+  | { templateId: "resolution_sniper"; version?: 1; params: HighProbabilityBondParams }
+  | { templateId: "fade_favorite"; version?: 1; params: FadeFavoriteParams }
   | { templateId: "classic_backtest"; version?: 1; params: StrategyConfig }
 
 export interface MarketTick {

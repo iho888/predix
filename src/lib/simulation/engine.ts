@@ -2,6 +2,7 @@ import { MarketTick, Trade, SimulationMetrics, StrategyConfig, Platform } from "
 import { generatePolymarketTicks } from "./markets/polymarket"
 import { generateKaishiTicks } from "./markets/kaishi"
 import { fetchRealPolymarketTicks } from "./markets/polymarket-real"
+import { fetchDbPolymarketTicks } from "./markets/polymarket-db"
 import { addDays, differenceInDays, format, startOfMonth } from "date-fns"
 
 function generateId(): string {
@@ -35,12 +36,19 @@ export async function runSimulation(
   endDate: Date,
   initialCapital: number
 ): Promise<{ metrics: SimulationMetrics; trades: Trade[] }> {
-  // Generate market data — real Polymarket data with synthetic fallback
+  // Market data: DB candles → live API → synthetic fallback
   let ticks: MarketTick[] = []
   if (platform === "polymarket" || platform === "generic") {
     try {
-      const realTicks = await fetchRealPolymarketTicks(startDate, endDate)
-      ticks = ticks.concat(realTicks.length > 0 ? realTicks : generatePolymarketTicks(startDate, endDate))
+      // Prefer stored DB candles (fast, no API rate limits)
+      const dbTicks = await fetchDbPolymarketTicks(startDate, endDate)
+      if (dbTicks.length > 0) {
+        ticks = ticks.concat(dbTicks)
+      } else {
+        // Fall back to live Polymarket API, then synthetic
+        const realTicks = await fetchRealPolymarketTicks(startDate, endDate).catch(() => [])
+        ticks = ticks.concat(realTicks.length > 0 ? realTicks : generatePolymarketTicks(startDate, endDate))
+      }
     } catch {
       ticks = ticks.concat(generatePolymarketTicks(startDate, endDate))
     }

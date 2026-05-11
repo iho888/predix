@@ -5,9 +5,21 @@ import { runDailySync } from "@/lib/sync/run-daily-sync"
 export const runtime = "nodejs"
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Observability hook: log every hit before the auth check so Vercel logs
+  // show whether the cron is firing at all. Until B-0005 is closed we have no
+  // other way to distinguish "cron never fired" from "cron fired but 401'd".
+  const userAgent = req.headers.get("user-agent") ?? ""
+  const isVercelCron = userAgent.includes("vercel-cron")
+  console.log(`[cron/sync-polymarket] hit ua=${userAgent.slice(0, 60)} vercel-cron=${isVercelCron}`)
+
   const expected = process.env.CRON_SECRET
-  const got = req.headers.get("x-cron-secret")
-  if (!expected || got !== expected) {
+  const xSecret = req.headers.get("x-cron-secret")
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
+  if (!expected || (xSecret !== expected && bearer !== expected)) {
+    console.error(
+      `[cron/sync-polymarket] 401: expected=${expected ? "set" : "MISSING"} ` +
+      `xSecret=${xSecret ? "present" : "absent"} bearer=${bearer ? "present" : "absent"}`
+    )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

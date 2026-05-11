@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db"
 import { ingestYesCandlesForMarket } from "@/lib/sync/ingest-candles"
-import { isBinaryNonNegRiskMarket } from "@/lib/sync/ingest-markets"
+import { ingestMarketsFromGamma, isBinaryNonNegRiskMarket } from "@/lib/sync/ingest-markets"
 
 const DEFAULT_GAMMA = "https://gamma-api.polymarket.com"
 
@@ -43,6 +43,9 @@ function inferWinningOutcomeIndexFromPrices(prices: unknown[]): 0 | 1 | null {
   if (!Number.isFinite(p0) || !Number.isFinite(p1)) return null
   if (p0 >= 0.99) return 0
   if (p1 >= 0.99) return 1
+  // Closed markets that settled below 0.99 — pick the higher price
+  if (p0 > p1) return 0
+  if (p1 > p0) return 1
   return null
 }
 
@@ -70,10 +73,16 @@ export type RunDailySyncResult = {
   candlesAdded: number
 }
 
-export async function runDailySync(options: { syncType: "cron" | "manual"; lookbackHours?: number }): Promise<RunDailySyncResult> {
+export async function runDailySync(options: { syncType: "cron" | "manual"; lookbackHours?: number; discoverMaxMarkets?: number }): Promise<RunDailySyncResult> {
   const lookbackHours = options.lookbackHours ?? 48
   const cutoff = new Date(Date.now() - lookbackHours * 60 * 60 * 1000)
   const now = new Date()
+
+  // Phase 0 — discovery. Page Gamma /markets to upsert new markets we don't know
+  // about yet. Without this, runDailySync only ever refreshes markets already in
+  // our DB, so any new Polymarket market is invisible forever. Tracked as B-0005.
+  const discoverCap = options.discoverMaxMarkets ?? Number(process.env.SYNC_DISCOVER_MAX ?? 1500)
+  const discovered = await ingestMarketsFromGamma({ maxMarkets: discoverCap })
 
   const candidates = await prisma.polymarketMarket.findMany({
     where: {
@@ -84,8 +93,8 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
     orderBy: [{ active: "desc" }, { updatedAt: "desc" }],
   })
 
-  let marketsAdded = 0
-  let marketsUpdated = 0
+  let marketsAdded = discovered.marketsAdded
+  let marketsUpdated = discovered.marketsUpdated
   let candlesAdded = 0
 
   for (const c of candidates) {

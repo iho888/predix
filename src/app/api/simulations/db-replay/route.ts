@@ -5,7 +5,7 @@ import { parseStoredStrategyConfig } from "@/lib/strategy-templates"
 import { runPolymarketDbSimulation } from "@/lib/simulation/polymarket-db-simulation"
 import { z } from "zod"
 
-export const maxDuration = 60
+export const maxDuration = 300
 export const runtime = "nodejs"
 
 const postSchema = z.object({
@@ -14,7 +14,8 @@ const postSchema = z.object({
   startDate: z.string().min(1),
   endDate: z.string().min(1),
   initialCapital: z.number().min(100).max(1_000_000),
-  maxMarkets: z.number().int().min(1).max(200).optional().default(50),
+  // max 200 markets supported; keep default low — 200 markets over 1yr can approach 60s
+  maxMarkets: z.number().int().min(1).max(200).optional().default(30),
 })
 
 const MAX_WINDOW_MS = 730 * 86400_000

@@ -2,7 +2,30 @@
 node_modules/
 .env
 .env.local
+.env*.local
 prisma/dev.db
 prisma/dev.db-journal
 .vercel
 *.tsbuildinfo
+
+# secrets & local creds
+db_pwd.txt
+secrets/
+*.pem
+*.key
+
+# logs (may contain user data / connection strings)
+*.log
+ingest*.log
+
+# claude harness — keep shared settings, ignore local
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/cache/
+.claude/state/
+
+# graphify output (regenerable; may contain code summaries / API shapes)
+graphify-out/
+
+# benchmark results (regenerable per SPEC; large)
+benchmarks/results/

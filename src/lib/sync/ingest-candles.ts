@@ -12,30 +12,31 @@ function sleep(ms: number): Promise<void> {
 
 export type ClobPricePoint = { t: number; p: number }
 
-export async function fetchClobPriceHistoryRange(options: {
-  tokenId: string
-  startTs: number
-  endTs: number
-  fidelityMinutes: number
-  timeoutMs?: number
-}): Promise<ClobPricePoint[]> {
-  const root = clobBaseUrl()
-  const p = new URLSearchParams()
-  p.set("market", options.tokenId)
-  p.set("startTs", String(Math.floor(options.startTs)))
-  p.set("endTs", String(Math.floor(options.endTs)))
-  p.set("fidelity", String(Math.max(60, Math.floor(options.fidelityMinutes))))
+// CLOB API rejects intervals longer than ~15 days; use 14-day chunks
+const CLOB_CHUNK_SECS = 14 * 86400
 
+async function fetchClobChunk(
+  root: string,
+  tokenId: string,
+  startTs: number,
+  endTs: number,
+  fidelity: number,
+  timeoutMs: number
+): Promise<ClobPricePoint[]> {
+  const p = new URLSearchParams()
+  p.set("market", tokenId)
+  p.set("startTs", String(Math.floor(startTs)))
+  p.set("endTs", String(Math.floor(endTs)))
+  p.set("fidelity", String(fidelity))
   const res = await fetch(`${root}/prices-history?${p}`, {
     cache: "no-store",
-    signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   if (!res.ok) return []
   const data: unknown = await res.json()
   if (!data || typeof data !== "object" || !("history" in data)) return []
   const hist = (data as { history?: unknown }).history
   if (!Array.isArray(hist)) return []
-
   const out: ClobPricePoint[] = []
   for (const row of hist) {
     if (!row || typeof row !== "object") continue
@@ -44,8 +45,35 @@ export async function fetchClobPriceHistoryRange(options: {
     if (!Number.isFinite(t) || !Number.isFinite(pNum)) continue
     out.push({ t, p: pNum })
   }
-  out.sort((a, b) => a.t - b.t)
   return out
+}
+
+export async function fetchClobPriceHistoryRange(options: {
+  tokenId: string
+  startTs: number
+  endTs: number
+  fidelityMinutes: number
+  timeoutMs?: number
+}): Promise<ClobPricePoint[]> {
+  const root = clobBaseUrl()
+  const fidelity = Math.max(60, Math.floor(options.fidelityMinutes))
+  const timeoutMs = options.timeoutMs ?? 15_000
+
+  const all: ClobPricePoint[] = []
+  let cursor = Math.floor(options.startTs)
+  const end = Math.floor(options.endTs)
+
+  while (cursor < end) {
+    const chunkEnd = Math.min(cursor + CLOB_CHUNK_SECS, end)
+    const pts = await fetchClobChunk(root, options.tokenId, cursor, chunkEnd, fidelity, timeoutMs)
+    all.push(...pts)
+    cursor = chunkEnd
+  }
+
+  const seen = new Set<number>()
+  return all
+    .filter((pt) => { if (seen.has(pt.t)) return false; seen.add(pt.t); return true })
+    .sort((a, b) => a.t - b.t)
 }
 
 export type IngestCandlesResult = {
