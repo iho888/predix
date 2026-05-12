@@ -4,7 +4,16 @@ import { runDailySync } from "@/lib/sync/run-daily-sync"
 
 export const runtime = "nodejs"
 
+// Vercel cron sends GET; keep POST for manual/curl triggers too.
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  return handler(req)
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  return handler(req)
+}
+
+async function handler(req: NextRequest): Promise<NextResponse> {
   // Observability hook: log every hit before the auth check so Vercel logs
   // show whether the cron is firing at all. Until B-0005 is closed we have no
   // other way to distinguish "cron never fired" from "cron fired but 401'd".

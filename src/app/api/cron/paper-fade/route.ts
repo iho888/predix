@@ -42,7 +42,16 @@ async function fetchBestAsk(tokenId: string): Promise<number | null> {
   } catch { return null }
 }
 
+// Vercel cron sends GET requests; keep POST for manual/curl triggers too.
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  return handler(req)
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  return handler(req)
+}
+
+async function handler(req: NextRequest): Promise<NextResponse> {
   const expected = process.env.CRON_SECRET
   const xSecret = req.headers.get("x-cron-secret")
   const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
