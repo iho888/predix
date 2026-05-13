@@ -88,8 +88,8 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
   // run, so candle ingest never started. Lower defaults + lastSyncedAt-asc
   // candidate ordering means staler markets get refreshed first and the work
   // rotates across daily invocations.
-  const defaultDiscover = isCron ? 400 : 1500
-  const defaultCandidates = isCron ? 200 : 5000
+  const defaultDiscover = isCron ? 200 : 1500
+  const defaultCandidates = isCron ? 80 : 5000
   const discoverCap = options.discoverMaxMarkets ?? Number(process.env.SYNC_DISCOVER_MAX ?? defaultDiscover)
   const candidateCap = options.candidateLimit ?? Number(process.env.SYNC_CANDIDATE_LIMIT ?? defaultCandidates)
   const discovered = await ingestMarketsFromGamma({ maxMarkets: discoverCap })
@@ -151,7 +151,14 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
     const yesTokenId = pickYesTokenId(c.clobTokenIdsJson ?? tokenIds)
     if (!yesTokenId) continue
 
-    const startTime = c.lastSyncedAt ?? c.startDate ?? cutoff
+    // For cron mode: never backfill beyond the lookback window. A stale market
+    // with lastSyncedAt=null would otherwise trigger a 365-day candle fetch
+    // (27× 14-day chunks via CLOB), which alone can eat the entire 300s budget.
+    // Full historical backfill is the job of the historic-cli flow.
+    const candleStart = isCron
+      ? (c.lastSyncedAt && c.lastSyncedAt.getTime() > cutoff.getTime() ? c.lastSyncedAt : cutoff)
+      : (c.lastSyncedAt ?? c.startDate ?? cutoff)
+    const startTime = candleStart
     const endTime = c.endDate ?? now
     if (endTime.getTime() <= startTime.getTime()) continue
 
