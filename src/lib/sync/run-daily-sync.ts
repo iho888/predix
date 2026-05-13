@@ -73,15 +73,25 @@ export type RunDailySyncResult = {
   candlesAdded: number
 }
 
-export async function runDailySync(options: { syncType: "cron" | "manual"; lookbackHours?: number; discoverMaxMarkets?: number }): Promise<RunDailySyncResult> {
+export async function runDailySync(options: { syncType: "cron" | "manual"; lookbackHours?: number; discoverMaxMarkets?: number; candidateLimit?: number }): Promise<RunDailySyncResult> {
   const lookbackHours = options.lookbackHours ?? 48
   const cutoff = new Date(Date.now() - lookbackHours * 60 * 60 * 1000)
   const now = new Date()
+  const isCron = options.syncType === "cron"
 
   // Phase 0 — discovery. Page Gamma /markets to upsert new markets we don't know
   // about yet. Without this, runDailySync only ever refreshes markets already in
   // our DB, so any new Polymarket market is invisible forever. Tracked as B-0005.
-  const discoverCap = options.discoverMaxMarkets ?? Number(process.env.SYNC_DISCOVER_MAX ?? 1500)
+  //
+  // Per-invocation caps for cron: must fit inside Vercel's 300s function cap.
+  // Prior default (discover=1500, candidates=5000) was killed mid-Phase-0 every
+  // run, so candle ingest never started. Lower defaults + lastSyncedAt-asc
+  // candidate ordering means staler markets get refreshed first and the work
+  // rotates across daily invocations.
+  const defaultDiscover = isCron ? 400 : 1500
+  const defaultCandidates = isCron ? 200 : 5000
+  const discoverCap = options.discoverMaxMarkets ?? Number(process.env.SYNC_DISCOVER_MAX ?? defaultDiscover)
+  const candidateCap = options.candidateLimit ?? Number(process.env.SYNC_CANDIDATE_LIMIT ?? defaultCandidates)
   const discovered = await ingestMarketsFromGamma({ maxMarkets: discoverCap })
 
   const candidates = await prisma.polymarketMarket.findMany({
@@ -89,8 +99,8 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
       OR: [{ active: true }, { updatedAt: { gte: cutoff } }, { lastSyncedAt: null }],
     },
     select: { slug: true, lastSyncedAt: true, startDate: true, endDate: true, clobTokenIdsJson: true },
-    take: 5000,
-    orderBy: [{ active: "desc" }, { updatedAt: "desc" }],
+    take: candidateCap,
+    orderBy: [{ lastSyncedAt: { sort: "asc", nulls: "first" } }],
   })
 
   let marketsAdded = discovered.marketsAdded

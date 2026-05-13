@@ -6,6 +6,7 @@ import { filterMarketsByFadeParams } from "@/lib/gamma/watchlist-filter"
 import type { FadeFavoriteParams } from "@/types"
 
 export const runtime = "nodejs"
+export const maxDuration = 300
 export const dynamic = "force-dynamic"
 
 const DEFAULT_CLOB = "https://clob.polymarket.com"
@@ -52,10 +53,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 async function handler(req: NextRequest): Promise<NextResponse> {
+  const userAgent = req.headers.get("user-agent") ?? ""
+  const isVercelCron = userAgent.includes("vercel-cron")
+  console.log(`[cron/paper-fade] hit ua=${userAgent.slice(0, 60)} vercel-cron=${isVercelCron}`)
+
   const expected = process.env.CRON_SECRET
   const xSecret = req.headers.get("x-cron-secret")
   const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
   if (!expected || (xSecret !== expected && bearer !== expected)) {
+    console.error(
+      `[cron/paper-fade] 401: expected=${expected ? "set" : "MISSING"} ` +
+      `xSecret=${xSecret ? "present" : "absent"} bearer=${bearer ? "present" : "absent"}`
+    )
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

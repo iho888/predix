@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db"
 import { runDailySync } from "@/lib/sync/run-daily-sync"
 
 export const runtime = "nodejs"
+export const maxDuration = 300
+export const dynamic = "force-dynamic"
 
 // Vercel cron sends GET; keep POST for manual/curl triggers too.
 export async function GET(req: NextRequest): Promise<NextResponse> {
