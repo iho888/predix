@@ -19,6 +19,11 @@ type Position = {
   entryFillPrice: number
   positionSizeUsd: number
   shares: number
+  currentBid: number | null
+  currentAsk: number | null
+  currentMid: number | null
+  unrealizedPnlUsd: number | null
+  unrealizedPct: number | null
   exitTime: string | null
   exitMid: number | null
   exitFillPrice: number | null
@@ -38,6 +43,8 @@ type Stats = {
   avgPnL: number | null
   profitFactor: number | null
   totalDeployedUsd: number
+  unrealizedPnL: number
+  marksAvailable: number
 }
 
 type ApiResponse = {
@@ -128,8 +135,18 @@ export default function PaperPositionsPage() {
 
       {data && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <StatCard label="Open positions" value={String(data.stats.openCount)} sub={fmtUsd(data.stats.totalDeployedUsd) + " deployed"} />
+            <StatCard
+              label="Unrealized PnL"
+              value={fmtUsd(data.stats.unrealizedPnL)}
+              sub={
+                data.stats.openCount > 0
+                  ? `${data.stats.marksAvailable}/${data.stats.openCount} marks live`
+                  : "no open positions"
+              }
+              tone={data.stats.unrealizedPnL > 0 ? "good" : data.stats.unrealizedPnL < 0 ? "bad" : "neutral"}
+            />
             <StatCard label="Closed positions" value={String(data.stats.closedCount)} sub={`${data.stats.wins}W / ${data.stats.losses}L`} />
             <StatCard label="Win rate" value={fmtPct(data.stats.winRate)} sub={data.stats.closedCount > 0 ? "since first exit" : "no closed trades yet"} />
             <StatCard
@@ -212,6 +229,8 @@ function PositionTable({ rows, mode }: { rows: Position[]; mode: "open" | "close
             <th className="text-right py-2 px-2">Size</th>
             {mode === "open" ? (
               <>
+                <th className="text-right py-2 px-2">Mark</th>
+                <th className="text-right py-2 px-2">Unrealized</th>
                 <th className="text-right py-2 px-2">Age</th>
                 <th className="text-right py-2 px-2">Resolves</th>
               </>
@@ -250,6 +269,29 @@ function PositionTable({ rows, mode }: { rows: Position[]; mode: "open" | "close
               <td className="text-right py-2 px-2 font-mono text-xs">{fmtUsd(p.positionSizeUsd)}</td>
               {mode === "open" ? (
                 <>
+                  <td className="text-right py-2 px-2 font-mono text-xs">
+                    {p.currentMid != null ? (
+                      <>
+                        {p.currentMid.toFixed(3)}
+                        <p className={`text-xs ${p.currentMid > p.entryFillPrice ? "text-emerald-500" : p.currentMid < p.entryFillPrice ? "text-rose-500" : "text-muted-foreground"}`}>
+                          {p.currentMid > p.entryFillPrice ? "+" : ""}
+                          {((p.currentMid - p.entryFillPrice) * 1000 | 0) / 1000}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className={`text-right py-2 px-2 font-mono text-sm ${(p.unrealizedPnlUsd ?? 0) > 0 ? "text-emerald-500" : (p.unrealizedPnlUsd ?? 0) < 0 ? "text-rose-500" : ""}`}>
+                    {p.unrealizedPnlUsd != null ? (
+                      <>
+                        {fmtUsd(p.unrealizedPnlUsd)}
+                        <p className="text-xs">{p.unrealizedPct != null ? fmtPct(p.unrealizedPct) : ""}</p>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="text-right py-2 px-2 text-xs">{fmtRelDays(p.entryTime)}</td>
                   <td className="text-right py-2 px-2 text-xs text-muted-foreground">{fmtRemainingDays(p.endDate)}</td>
                 </>
