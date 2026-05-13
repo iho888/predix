@@ -199,18 +199,6 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
     }
   }
 
-  await prisma.dataSyncLog.create({
-    data: {
-      startedAt: now,
-      finishedAt: new Date(),
-      status: "completed",
-      syncType: options.syncType,
-      marketsAdded,
-      marketsUpdated,
-      candlesAdded,
-    },
-  })
-
   return { marketsAdded, marketsUpdated, candlesAdded }
 }
 
