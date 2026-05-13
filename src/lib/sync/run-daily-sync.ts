@@ -88,8 +88,8 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
   // run, so candle ingest never started. Lower defaults + lastSyncedAt-asc
   // candidate ordering means staler markets get refreshed first and the work
   // rotates across daily invocations.
-  const defaultDiscover = isCron ? 200 : 1500
-  const defaultCandidates = isCron ? 80 : 5000
+  const defaultDiscover = isCron ? 150 : 1500
+  const defaultCandidates = isCron ? 40 : 5000
   const discoverCap = options.discoverMaxMarkets ?? Number(process.env.SYNC_DISCOVER_MAX ?? defaultDiscover)
   const candidateCap = options.candidateLimit ?? Number(process.env.SYNC_CANDIDATE_LIMIT ?? defaultCandidates)
   const discovered = await ingestMarketsFromGamma({ maxMarkets: discoverCap })
@@ -180,13 +180,23 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
       yesTokenId,
       startTime,
       endTime,
+      // Skip the inter-market delay in cron mode — every 200ms costs us
+      // budget we don't have. Polymarket's CLOB hasn't rate-limited us at
+      // this volume in practice.
+      delayMs: isCron ? 0 : undefined,
     })
     candlesAdded += res.candlesAdded
 
-    await prisma.polymarketMarket.update({
-      where: { slug: c.slug },
-      data: { lastSyncedAt: now },
-    })
+    // The lastSyncedAt was already set by the upsert above (line 140 in the
+    // `data` payload). The redundant update here costs ~100ms per market.
+    // Manual mode keeps it for historical compatibility with operators who
+    // expect lastSyncedAt to advance after candle ingest specifically.
+    if (!isCron) {
+      await prisma.polymarketMarket.update({
+        where: { slug: c.slug },
+        data: { lastSyncedAt: now },
+      })
+    }
   }
 
   await prisma.dataSyncLog.create({
