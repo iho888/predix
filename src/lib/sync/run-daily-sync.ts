@@ -94,9 +94,22 @@ export async function runDailySync(options: { syncType: "cron" | "manual"; lookb
   const candidateCap = options.candidateLimit ?? Number(process.env.SYNC_CANDIDATE_LIMIT ?? defaultCandidates)
   const discovered = await ingestMarketsFromGamma({ maxMarkets: discoverCap })
 
+  // Candidate filter: only LIVE markets are worth refreshing. Polymarket has
+  // thousands of resolved-but-active=true rows; without `closed=false` the
+  // cron picks the staleest of those (markets that ended in 2024), every
+  // iteration skips on `endTime<=startTime`, and we return candlesAdded=0.
   const candidates = await prisma.polymarketMarket.findMany({
     where: {
-      OR: [{ active: true }, { updatedAt: { gte: cutoff } }, { lastSyncedAt: null }],
+      closed: false,
+      OR: [
+        { endDate: null },
+        { endDate: { gt: now } },
+      ],
+      AND: [
+        {
+          OR: [{ active: true }, { updatedAt: { gte: cutoff } }, { lastSyncedAt: null }],
+        },
+      ],
     },
     select: { slug: true, lastSyncedAt: true, startDate: true, endDate: true, clobTokenIdsJson: true },
     take: candidateCap,
